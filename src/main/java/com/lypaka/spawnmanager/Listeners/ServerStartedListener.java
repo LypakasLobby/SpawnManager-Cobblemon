@@ -1,10 +1,13 @@
 package com.lypaka.spawnmanager.Listeners;
 
+import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
 import com.lypaka.areamanager.API.AreaEvents.AreaLeaveCallback;
 import com.lypaka.areamanager.API.FinishedLoadingCallback;
 import com.lypaka.lypakautils.API.PlayerLandMovementCallback;
 import com.lypaka.lypakautils.API.PlayerWaterMovementCallback;
+import com.lypaka.spawnmanager.Commands.AddCommand;
 import com.lypaka.spawnmanager.Spawners.*;
+import com.lypaka.spawnmanager.Utils.BattleUtils;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -27,6 +30,9 @@ public class ServerStartedListener implements ServerLifecycleEvents.ServerStarte
         PlayerWaterMovementCallback.EVENT.register(new SurfSpawner());
         NaturalSpawner.startTimer();
         FishSpawner.registerReel();
+        BattleUtils.register();
+
+        PokemonSpecies.INSTANCE.getImplemented().forEach(e -> AddCommand.species.add(e.getName()));
 
     }
 

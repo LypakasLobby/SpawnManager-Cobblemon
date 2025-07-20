@@ -161,7 +161,6 @@ public class PossibleSpawnsMenu {
 
         UIManager.openUIForcefully(this.player, page);
 
-
     }
 
     private static void setTitle (LinkedPage page) {

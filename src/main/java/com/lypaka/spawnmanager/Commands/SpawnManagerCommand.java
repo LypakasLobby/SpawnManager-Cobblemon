@@ -13,6 +13,7 @@ public class SpawnManagerCommand {
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 
+            new AddCommand(dispatcher);
             new MenuCommand(dispatcher);
             new ReloadCommand(dispatcher);
 

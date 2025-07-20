@@ -18,6 +18,7 @@ import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.AreaSpawns;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.PokemonSpawn;
+import com.lypaka.spawnmanager.Utils.BattleUtils;
 import com.lypaka.spawnmanager.Utils.ExternalAbilities.*;
 import com.lypaka.spawnmanager.Utils.HeldItemUtils;
 import com.lypaka.spawnmanager.Utils.MiscUtils;
@@ -226,7 +227,12 @@ public class CaveSpawner implements PlayerLandMovementCallback {
 
                                         if (BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) == null) {
 
-                                            BattleBuilder.INSTANCE.pve(player, entity, null).ifSuccessful(function -> Unit.INSTANCE);
+                                            BattleBuilder.INSTANCE.pve(player, entity, null).ifSuccessful(function -> {
+
+                                                BattleUtils.autoBattlePlayerUUIDs.add(player.getUuid());
+                                                return Unit.INSTANCE;
+
+                                            });
 
                                         }
                                     }
