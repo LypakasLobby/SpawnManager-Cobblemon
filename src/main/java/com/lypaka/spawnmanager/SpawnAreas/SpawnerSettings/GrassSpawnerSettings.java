@@ -9,15 +9,25 @@ public class GrassSpawnerSettings {
     private final List<String> blockIDs;
     private final boolean despawnAfterBattle;
     private final Map<String, String> messagesMap;
+    private final boolean preventCobblemonSpawns;
+    private final double spawnerShinyChance;
     private final double spawnChance;
+    private final int spawnLimit;
+    private final int spawnRadius;
 
-    public GrassSpawnerSettings (boolean autoBattle, List<String> blockIDs, boolean despawnAfterBattle, Map<String, String> messagesMap, double spawnChance) {
+    public GrassSpawnerSettings (boolean autoBattle, List<String> blockIDs, boolean despawnAfterBattle,
+                                 Map<String, String> messagesMap, boolean preventCobblemonSpawns, double spawnerShinyChance, double spawnChance,
+                                 int spawnLimit, int spawnRadius) {
 
         this.autoBattle = autoBattle;
         this.blockIDs = blockIDs;
         this.despawnAfterBattle = despawnAfterBattle;
         this.messagesMap = messagesMap;
+        this.preventCobblemonSpawns = preventCobblemonSpawns;
+        this.spawnerShinyChance = spawnerShinyChance;
         this.spawnChance = spawnChance;
+        this.spawnLimit = spawnLimit;
+        this.spawnRadius = spawnRadius;
 
     }
 
@@ -45,9 +55,33 @@ public class GrassSpawnerSettings {
 
     }
 
+    public boolean doesPreventCobblemonSpawns() {
+
+        return this.preventCobblemonSpawns;
+
+    }
+
+    public double getSpawnerShinyChance() {
+
+        return this.spawnerShinyChance;
+
+    }
+
     public double getSpawnChance() {
 
         return this.spawnChance;
+
+    }
+
+    public int getSpawnLimit() {
+
+        return this.spawnLimit;
+
+    }
+
+    public int getSpawnRadius() {
+
+        return this.spawnRadius;
 
     }
 

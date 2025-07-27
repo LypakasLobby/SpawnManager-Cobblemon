@@ -13,10 +13,15 @@ import com.lypaka.lypakautils.Handlers.WorldTimeHandler;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.AreaSpawns;
+import com.lypaka.spawnmanager.SpawnAreas.Spawns.FishSpawn;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.PokemonSpawn;
+import com.lypaka.spawnmanager.SpawnManager;
 import com.lypaka.spawnmanager.Utils.ExternalAbilities.*;
 import com.lypaka.spawnmanager.Utils.HeldItemUtils;
+import com.lypaka.spawnmanager.Utils.MiscUtils;
 import com.lypaka.spawnmanager.Utils.PokemonSpawnBuilder;
+import com.lypaka.spawnmanager.Utils.SpawnerUtils.GeneratedSpawn;
+import com.lypaka.spawnmanager.Utils.SpawnerUtils.SpawnGenerator;
 import kotlin.Unit;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.World;
@@ -96,12 +101,22 @@ public class FishSpawner {
         CobblemonEvents.BOBBER_SPAWN_POKEMON_MODIFY.subscribe(Priority.NORMAL, event -> {
 
             ServerPlayerEntity player = (ServerPlayerEntity) event.getRod().getHolder();
+            if (player == null) return Unit.INSTANCE; // I have no idea how the fuck the player could be null here, because someone has to be holding the fucking rod I would imagine but apparently it can be null so....whatever
             int x = player.getBlockPos().getX();
             int y = player.getBlockPos().getY();
             int z = player.getBlockPos().getZ();
             World world = player.getWorld();
             List<Area> areas = AreaHandler.getSortedAreas(x, y, z, world);
             if (areas.isEmpty()) return Unit.INSTANCE;
+            SpawnManager.spawnerLogicThread.execute(() -> {
+
+                List<GeneratedSpawn> toSpawn = SpawnGenerator.generateFishSpawn(player);
+                GeneratedSpawn spawn = RandomHandler.getRandomElementFromList(toSpawn);
+                Pokemon pokemonToSpawn = spawn.getPokemon();
+                event.getPokemon().setPokemon(pokemonToSpawn);
+
+            });
+            /*
             String time = "Night";
             List<String> times = WorldTimeHandler.getCurrentTimeValues(world);
             for (String t : times) {
@@ -157,12 +172,16 @@ public class FishSpawner {
 
                     Map<PokemonSpawn, Double> pokemon = PokemonSpawnBuilder.buildFishSpawns(time, weather, spawns, modifier);
                     Map<Pokemon, PokemonSpawn> mapForHustle = new HashMap<>();
+                    Map<Pokemon, Double> pokemonShinyChances = new HashMap<>();
                     for (Map.Entry<PokemonSpawn, Double> p : pokemon.entrySet()) {
 
                         if (RandomHandler.getRandomChance(p.getValue())) {
 
                             Pokemon poke = PokemonSpawnBuilder.buildPokemonFromPokemonSpawn(p.getKey());
                             mapForHustle.put(poke, p.getKey());
+                            FishSpawn fishSpawn = (FishSpawn) p;
+                            double shinyChance = Double.parseDouble(fishSpawn.getSpawnData().get(time).get(weather).getOrDefault("Shiny-Chance", String.valueOf(Cobblemon.INSTANCE.getConfig().getShinyRate())));
+                            pokemonShinyChances.put(poke, shinyChance);
                             if (Intimidate.applies(playersPokemon) || KeenEye.applies(playersPokemon)) {
 
                                 poke = Intimidate.tryIntimidate(poke, playersPokemon);
@@ -209,6 +228,8 @@ public class FishSpawner {
                             }
                             poke.setLevel(level);
                             HeldItemUtils.tryApplyHeldItem(poke, playersPokemon);
+                            double pokemonShinyChance = pokemonShinyChances.get(poke);
+                            MiscUtils.tryShiny(poke, pokemonShinyChance);
                             event.getPokemon().setPokemon(poke);
 
                         }
@@ -217,7 +238,7 @@ public class FishSpawner {
 
                 }
 
-            }
+            }*/
 
             return Unit.INSTANCE;
 

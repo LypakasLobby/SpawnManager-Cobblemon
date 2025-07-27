@@ -9,6 +9,7 @@ import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.lypaka.areamanager.Areas.Area;
 import com.lypaka.areamanager.Areas.AreaHandler;
+import com.lypaka.areamanager.Regions.RegionHandler;
 import com.lypaka.lypakautils.API.PlayerLandMovementCallback;
 import com.lypaka.lypakautils.Handlers.FancyTextHandler;
 import com.lypaka.lypakautils.Handlers.RandomHandler;
@@ -17,12 +18,16 @@ import com.lypaka.spawnmanager.Listeners.TickListener;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.AreaSpawns;
+import com.lypaka.spawnmanager.SpawnAreas.Spawns.GrassSpawn;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.PokemonSpawn;
+import com.lypaka.spawnmanager.SpawnManager;
 import com.lypaka.spawnmanager.Utils.BattleUtils;
 import com.lypaka.spawnmanager.Utils.ExternalAbilities.*;
 import com.lypaka.spawnmanager.Utils.HeldItemUtils;
 import com.lypaka.spawnmanager.Utils.MiscUtils;
 import com.lypaka.spawnmanager.Utils.PokemonSpawnBuilder;
+import com.lypaka.spawnmanager.Utils.SpawnerUtils.GeneratedSpawn;
+import com.lypaka.spawnmanager.Utils.SpawnerUtils.SpawnGenerator;
 import kotlin.Unit;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
@@ -31,10 +36,12 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GrassSpawner implements PlayerLandMovementCallback {
 
     public static List<UUID> spawnedPokemonUUIDs = new ArrayList<>(); // used for battle end event listener to check for to despawn Pokemon or not
+    public static Map<UUID, List<PokemonEntity>> playerPokemonCount = new HashMap<>();
 
     @Override
     public void onPlayerMove (ServerPlayerEntity player, int steps) {
@@ -47,205 +54,160 @@ public class GrassSpawner implements PlayerLandMovementCallback {
             int y = player.getBlockPos().getY();
             int z = player.getBlockPos().getZ();
             World world = player.getWorld();
+            BlockPos playerPos = player.getBlockPos();
+            BlockState state = world.getBlockState(playerPos);
+            String blockID = Registries.BLOCK.getId(state.getBlock()).toString();
             List<Area> areas = AreaHandler.getSortedAreas(x, y, z, world);
             if (areas.isEmpty()) return;
 
-            String time = "Night";
-            List<String> times = WorldTimeHandler.getCurrentTimeValues(world);
-            for (String t : times) {
+            Map<Area, List<UUID>> p = AreaHandler.playersInArea.get(RegionHandler.getRegionAtPlayer(player).getName());
+            for (Area area : areas) {
 
-                if (t.equalsIgnoreCase("DAY") || t.equalsIgnoreCase("DAWN") || t.equalsIgnoreCase("MORNING")) {
+                SpawnArea currentSpawnArea = SpawnAreaHandler.areaMap.get(area);
+                if (currentSpawnArea.getGrassSpawnerSettings().getBlockIDs().contains(blockID)) {
 
-                    time = "Day";
-                    break;
+                    if (currentSpawnArea.getGrassSpawnerSettings().doesAutoBattle() && BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) != null) break;
+                    if (currentSpawnArea.getGrassSpawnerSettings().doesAutoBattle() && !MiscUtils.canPlayerBattle(player)) break;
+                    if (p.containsKey(area)) {
 
-                }
+                        List<UUID> uuids = p.get(area);
+                        List<PokemonEntity> playersSpawnedPokemon = new ArrayList<>();
+                        if (uuids.contains(player.getUuid())) {
 
-            }
-            String weather = "Clear";
-            if (world.isRaining()) {
+                            AtomicInteger count = new AtomicInteger(0);
+                            for (UUID u : uuids) {
 
-                weather = "Rain";
+                                if (u.toString().equalsIgnoreCase(player.getUuid().toString())) {
 
-            } else if (world.isThundering()) {
+                                    if (playerPokemonCount.containsKey(u)) {
 
-                weather = "Storm";
+                                        count.set(playerPokemonCount.get(u).size());
+                                        playersSpawnedPokemon = playerPokemonCount.get(u);
 
-            }
-            String location = "land";
-            Pokemon toSpawn = null;
-            Pokemon playersPokemon = null;
-            PlayerPartyStore party = Cobblemon.INSTANCE.getStorage().getParty(player);
-            for (int i = 0; i < 6; i++) {
-
-                Pokemon p = party.get(i);
-                if (p != null) {
-
-                    playersPokemon = p;
-                    break;
-
-                }
-
-            }
-            List<Area> sortedAreas = AreaHandler.getSortedAreas(x, y, z, world);
-            double modifier = 1.0;
-            if (ArenaTrap.applies(playersPokemon) || Illuminate.applies(playersPokemon) || NoGuard.applies(playersPokemon)) {
-
-                modifier = 2.0;
-
-            } else if (Infiltrator.applies(playersPokemon) || QuickFeet.applies(playersPokemon) || Stench.applies(playersPokemon) || WhiteSmoke.applies(playersPokemon)) {
-
-                modifier = 0.5;
-
-            }
-
-            BlockPos pos = player.getBlockPos();
-            BlockState state = world.getBlockState(pos);
-            String blockID = Registries.BLOCK.getId(state.getBlock()).toString();
-            if (blockID.equalsIgnoreCase("air")) location = "air";
-            if (blockID.contains("water") || blockID.contains("lava")) location = "water";
-            for (int i = 0; i < sortedAreas.size(); i++) {
-
-                Area currentArea = sortedAreas.get(i);
-                SpawnArea spawnArea = SpawnAreaHandler.areaMap.get(currentArea);
-                if (!RandomHandler.getRandomChance(spawnArea.getGrassSpawnerSettings().getSpawnChance())) continue;
-                if (spawnArea.getGrassSpawnerSettings().getBlockIDs().contains(blockID)) {
-
-                    if (spawnArea.getGrassSpawnerSettings().doesAutoBattle() && BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) != null) break;
-                    if (spawnArea.getGrassSpawnerSettings().doesAutoBattle() && !MiscUtils.canPlayerBattle(player)) break;
-                    AreaSpawns spawns = SpawnAreaHandler.areaSpawnMap.get(spawnArea);
-                    if (!spawns.getGrassSpawns().isEmpty()) {
-
-                        Map<PokemonSpawn, Double> pokemon = PokemonSpawnBuilder.buildGrassSpawnsList(time, weather, location, spawns, modifier);
-                        Map<Pokemon, PokemonSpawn> mapForHustle = new HashMap<>();
-                        for (Map.Entry<PokemonSpawn, Double> p : pokemon.entrySet()) {
-
-                            if (toSpawn == null) {
-
-                                if (RandomHandler.getRandomChance(p.getValue())) {
-
-                                    toSpawn = PokemonSpawnBuilder.buildPokemonFromPokemonSpawn(p.getKey());
-                                    mapForHustle.put(toSpawn, p.getKey());
+                                    }
                                     break;
 
                                 }
 
-                            } else {
-
-                                break;
-
                             }
 
-                        }
-                        if (Intimidate.applies(playersPokemon) || KeenEye.applies(playersPokemon)) {
+                            if (count.get() >= currentSpawnArea.getGrassSpawnerSettings().getSpawnLimit()) continue;
 
-                            toSpawn = Intimidate.tryIntimidate(toSpawn, playersPokemon);
-                            if (toSpawn == null) continue;
+                            List<PokemonEntity> finalPlayersSpawnedPokemon = playersSpawnedPokemon;
+                            SpawnManager.spawnerLogicThread.execute(() -> {
 
-                        }
-                        if (FlashFire.applies(playersPokemon)) {
+                                List<GeneratedSpawn> toSpawn = SpawnGenerator.generateGrassSpawn(area, player);
+                                if (toSpawn.isEmpty()) return;
+                                if (!currentSpawnArea.getGrassSpawnerSettings().doesAutoBattle()) {
 
-                            toSpawn = FlashFire.tryFlashFire(toSpawn, pokemon);
+                                    player.getServer().executeSync(() -> {
 
-                        } else if (Harvest.applies(playersPokemon)) {
+                                        for (GeneratedSpawn spawn : toSpawn) {
 
-                            toSpawn = Harvest.tryHarvest(toSpawn, pokemon);
+                                            if (spawn == null) continue;
+                                            Pokemon poke = spawn.getPokemon();
+                                            BlockPos pos = spawn.getSpawnLocation();
+                                            int spawnX = pos.getX();
+                                            int spawnY = pos.getY();
+                                            int spawnZ = pos.getZ();
+                                            List<Area> areasAtSpawn = AreaHandler.getFromLocation(spawnX, spawnY, spawnZ, player.getWorld());
+                                            if (areasAtSpawn.isEmpty()) continue;
+                                            PokemonEntity entity = new PokemonEntity(player.getWorld(), poke, CobblemonEntities.POKEMON);
+                                            entity.setPosition(spawnX, spawnY + 1.5, spawnZ);
+                                            player.getWorld().spawnEntity(entity);
+                                            finalPlayersSpawnedPokemon.add(entity);
+                                            count.getAndIncrement();
+                                            if (count.get() >= currentSpawnArea.getGrassSpawnerSettings().getSpawnLimit()) {
 
-                        } else if (LightningRod.applies(playersPokemon) || Static.applies(playersPokemon)) {
+                                                break;
 
-                            toSpawn = LightningRod.tryLightningRod(toSpawn, pokemon);
+                                            }
+                                            playerPokemonCount.put(player.getUuid(), finalPlayersSpawnedPokemon);
+                                            if (currentSpawnArea.getGrassSpawnerSettings().doesDespawnAfterBattle()) {
 
-                        } else if (MagnetPull.applies(playersPokemon)) {
+                                                spawnedPokemonUUIDs.add(entity.getUuid());
 
-                            toSpawn = MagnetPull.tryMagnetPull(toSpawn, pokemon);
+                                            }
+                                            String messageType = "";
+                                            if (poke.getShiny()) {
 
-                        } else if (StormDrain.applies(playersPokemon)) {
+                                                messageType = "-Shiny";
 
-                            toSpawn = StormDrain.tryStormDrain(toSpawn, pokemon);
+                                            }
+                                            messageType = "Spawn-Message" + messageType;
+                                            String message = currentSpawnArea.getGrassSpawnerSettings().getMessagesMap().get(messageType);
+                                            if (!message.equalsIgnoreCase("")) {
 
-                        }
+                                                player.sendMessage(FancyTextHandler.getFormattedText(message.replace("%pokemon%", poke.getSpecies().getName())), true);
 
-                        if (CuteCharm.applies(playersPokemon)) {
-
-                            CuteCharm.tryApplyCuteCharmEffect(toSpawn, playersPokemon);
-
-                        } else if (Synchronize.applies(playersPokemon)) {
-
-                            Synchronize.applySynchronize(toSpawn, playersPokemon);
-
-                        }
-
-                        if (toSpawn == null) continue;
-
-                        int level = toSpawn.getLevel();
-                        if (Hustle.applies(playersPokemon) || Pressure.applies(playersPokemon) || VitalSpirit.applies(playersPokemon)) {
-
-                            level = Hustle.tryHustle(level, mapForHustle.get(toSpawn));
-
-                        }
-                        toSpawn.setLevel(level);
-
-                        HeldItemUtils.tryApplyHeldItem(toSpawn, playersPokemon);
-
-                        int spawnX = player.getBlockX();
-                        int spawnY = player.getBlockY();
-                        int spawnZ = player.getBlockZ();
-
-                        List<Area> areasAtSpawn = AreaHandler.getFromLocation(spawnX, spawnY, spawnZ, player.getWorld());
-                        if (areasAtSpawn.isEmpty()) continue;
-                        PokemonEntity entity = new PokemonEntity(player.getWorld(), toSpawn, CobblemonEntities.POKEMON);
-                        entity.setPosition(spawnX, spawnY + 1.5, spawnZ);
-                        Pokemon finalToSpawn = toSpawn;
-                        player.getWorld().getServer().executeSync(() -> {
-
-                            player.getWorld().spawnEntity(entity);
-                            if (spawnArea.getGrassSpawnerSettings().doesDespawnAfterBattle()) {
-
-                                spawnedPokemonUUIDs.add(entity.getUuid());
-
-                            }
-                            if (spawnArea.getGrassSpawnerSettings().doesAutoBattle()) {
-
-                                String messageType = "";
-                                if (finalToSpawn.getShiny()) {
-
-                                    messageType = "-Shiny";
-
-                                }
-                                messageType = "Spawn-Message" + messageType;
-                                String message = spawnArea.getGrassSpawnerSettings().getMessagesMap().get(messageType);
-                                if (!message.equalsIgnoreCase("")) {
-
-                                    player.sendMessage(FancyTextHandler.getFormattedText(message.replace("%pokemon%", finalToSpawn.getSpecies().getName())), true);
-
-                                }
-                                Timer t = new Timer();
-                                t.schedule(new TimerTask() {
-
-                                    @Override
-                                    public void run() {
-
-                                        if (BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) == null) {
-
-                                            BattleBuilder.INSTANCE.pve(player, entity, null).ifSuccessful(function -> {
-
-                                                BattleUtils.autoBattlePlayerUUIDs.add(player.getUuid());
-                                                return Unit.INSTANCE;
-
-                                            });
+                                            }
 
                                         }
-                                    }
 
-                                }, 10);
+                                    });
 
-                            }
+                                } else {
 
-                        });
+                                    player.getServer().executeSync(() -> {
 
-                    } else {
+                                        GeneratedSpawn spawn = RandomHandler.getRandomElementFromList(toSpawn);
+                                        if (spawn == null) return;
+                                        Pokemon poke = spawn.getPokemon();
+                                        BlockPos pos = player.getBlockPos();
+                                        int spawnX = pos.getX();
+                                        int spawnY = pos.getY();
+                                        int spawnZ = pos.getZ();
+                                        PokemonEntity entity = new PokemonEntity(player.getWorld(), poke, CobblemonEntities.POKEMON);
+                                        entity.setPosition(spawnX, spawnY + 1.5, spawnZ);
+                                        player.getWorld().spawnEntity(entity);
+                                        finalPlayersSpawnedPokemon.add(entity);
+                                        count.getAndIncrement();
+                                        playerPokemonCount.put(player.getUuid(), finalPlayersSpawnedPokemon);
+                                        if (currentSpawnArea.getGrassSpawnerSettings().doesDespawnAfterBattle()) {
 
-                        break;
+                                            spawnedPokemonUUIDs.add(entity.getUuid());
+
+                                        }
+                                        String messageType = "";
+                                        if (poke.getShiny()) {
+
+                                            messageType = "-Shiny";
+
+                                        }
+                                        messageType = "Spawn-Message" + messageType;
+                                        String message = currentSpawnArea.getGrassSpawnerSettings().getMessagesMap().get(messageType);
+                                        if (!message.equalsIgnoreCase("")) {
+
+                                            player.sendMessage(FancyTextHandler.getFormattedText(message.replace("%pokemon%", poke.getSpecies().getName())), true);
+
+                                        }
+                                        Timer t = new Timer();
+                                        t.schedule(new TimerTask() {
+
+                                            @Override
+                                            public void run() {
+
+                                                if (BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) == null) {
+
+                                                    BattleBuilder.INSTANCE.pve(player, entity, null).ifSuccessful(function -> {
+
+                                                        BattleUtils.autoBattlePlayerUUIDs.add(player.getUuid());
+                                                        return Unit.INSTANCE;
+
+                                                    });
+
+                                                }
+                                            }
+
+                                        }, 10);
+
+                                    });
+
+                                }
+
+                            });
+
+                        }
 
                     }
 

@@ -8,6 +8,7 @@ import com.lypaka.lypakautils.API.PlayerWaterMovementCallback;
 import com.lypaka.spawnmanager.Commands.AddCommand;
 import com.lypaka.spawnmanager.Spawners.*;
 import com.lypaka.spawnmanager.Utils.BattleUtils;
+import com.lypaka.spawnmanager.Utils.SpawnerUtils.DespawnChecker;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -28,9 +29,13 @@ public class ServerStartedListener implements ServerLifecycleEvents.ServerStarte
         PlayerLandMovementCallback.EVENT.register(new GrassSpawner());
         PlayerLandMovementCallback.EVENT.register(new CaveSpawner());
         PlayerWaterMovementCallback.EVENT.register(new SurfSpawner());
+        //NaturalSpawner.startTimer();
         NaturalSpawner.startTimer();
         FishSpawner.registerReel();
         BattleUtils.register();
+        DespawnChecker.startChecker();
+        CaptureListener.register();
+        KillListener.register();
 
         PokemonSpecies.INSTANCE.getImplemented().forEach(e -> AddCommand.species.add(e.getName()));
 

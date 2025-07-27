@@ -4,6 +4,7 @@ import ca.landonjw.gooeylibs2.api.UIManager;
 import ca.landonjw.gooeylibs2.api.button.GooeyButton;
 import ca.landonjw.gooeylibs2.api.page.GooeyPage;
 import ca.landonjw.gooeylibs2.api.template.types.ChestTemplate;
+import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.item.PokemonItem;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.lypaka.areamanager.Areas.Area;
@@ -11,7 +12,9 @@ import com.lypaka.areamanager.Regions.Region;
 import com.lypaka.lypakautils.Handlers.FancyTextHandler;
 import com.lypaka.lypakautils.Handlers.ItemStackHandler;
 import com.lypaka.shadow.configurate.objectmapping.ObjectMappingException;
+import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
+import com.lypaka.spawnmanager.SpawnAreas.Spawns.AreaSpawns;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
@@ -60,6 +63,7 @@ public class SpawnDataEditorMainMenu {
             map1.put("Group-Size", "1");
             map1.put("Spawn-Chance", "0.30");
             map1.put("Spawn-Location", "land");
+            map1.put("Shiny-Chance", String.valueOf(getSpawnersShinyRate(area, spawner)));
             Map<String, Map<String, String>> map2 = new HashMap<>();
             map2.put("Clear", map1);
             map2.put("Rain", map1);
@@ -80,7 +84,7 @@ public class SpawnDataEditorMainMenu {
         lore.add(FancyTextHandler.getFormattedText("&eLevel Range: &a" + minLevel + " - " + maxLevel));
         lore.add(FancyTextHandler.getFormattedText("&bSpawn Data:"));
         lore.add(FancyTextHandler.getFormattedText(""));
-        String data = "&eTime: &a%time%, &eWeather: &a%weather% &e--> &eGroup Size: &a%groupSize%, &eSpawn Chance: &a%spawnChance%, &eSpawn Location: &a%spawnLocation%";
+        String data = "&eTime: &a%time%, &eWeather: &a%weather% &e--> &eGroup Size: &a%groupSize%, &eSpawn Chance: &a%spawnChance%, &eSpawn Location: &a%spawnLocation%, &eShiny Chance: &a%shinyChance%";
         for (Map.Entry<String, Map<String, Map<String, String>>> entry : this.spawnData.entrySet()) {
 
             String time = entry.getKey();
@@ -92,12 +96,14 @@ public class SpawnDataEditorMainMenu {
                 String groupSize = d3.getOrDefault("Group-Size", "1");
                 String spawnChance = d3.get("Spawn-Chance");
                 String spawnLocation = d3.get("Spawn-Location");
+                String shinyChance = d3.getOrDefault("Shiny-Chance", String.valueOf(getSpawnersShinyRate(area, spawner)));
                 lore.add(FancyTextHandler.getFormattedText(data
                         .replace("%time%", time)
                         .replace("%weather%", weather)
                         .replace("%groupSize%", groupSize)
                         .replace("%spawnChance%", spawnChance)
                         .replace("%spawnLocation%", spawnLocation)
+                        .replace("%shinyChance%", shinyChance)
                 ));
                 lore.add(FancyTextHandler.getFormattedText(""));
 
@@ -194,6 +200,43 @@ public class SpawnDataEditorMainMenu {
     public int getMaxLevel() {
 
         return this.maxLevel;
+
+    }
+
+    private double getSpawnersShinyRate (Area area, String spawner) {
+
+        double value = Cobblemon.INSTANCE.getConfig().getShinyRate();
+        SpawnArea spawnArea = SpawnAreaHandler.areaMap.getOrDefault(area, null);
+        if (spawnArea == null) {
+
+            return value;
+
+        }
+
+        switch (spawner.toLowerCase()) {
+
+            case "cave":
+                value = spawnArea.getCaveSpawnerSettings().getSpawnerShinyChance();
+                break;
+
+            case "grass":
+                value = spawnArea.getGrassSpawnerSettings().getSpawnerShinyChance();
+                break;
+
+            case "surf":
+                value = spawnArea.getSurfSpawnerSettings().getSpawnerShinyChance();
+                break;
+
+            case "natural":
+                value = spawnArea.getNaturalSpawnerSettings().getSpawnerShinyChance();
+                break;
+
+            default:
+                break;
+
+        }
+
+        return value;
 
     }
 

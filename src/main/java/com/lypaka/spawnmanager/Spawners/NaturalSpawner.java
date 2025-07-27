@@ -1,37 +1,28 @@
 package com.lypaka.spawnmanager.Spawners;
 
-import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.CobblemonEntities;
-import com.cobblemon.mod.common.api.storage.party.PlayerPartyStore;
 import com.cobblemon.mod.common.battles.BattleBuilder;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.lypaka.areamanager.Areas.Area;
 import com.lypaka.areamanager.Areas.AreaHandler;
+import com.lypaka.areamanager.Regions.Region;
 import com.lypaka.lypakautils.Handlers.FancyTextHandler;
 import com.lypaka.lypakautils.Handlers.RandomHandler;
-import com.lypaka.lypakautils.Handlers.WorldTimeHandler;
 import com.lypaka.lypakautils.LypakaUtils;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
-import com.lypaka.spawnmanager.SpawnAreas.Spawns.AreaSpawns;
-import com.lypaka.spawnmanager.SpawnAreas.Spawns.PokemonSpawn;
+import com.lypaka.spawnmanager.SpawnManager;
 import com.lypaka.spawnmanager.Utils.BattleUtils;
-import com.lypaka.spawnmanager.Utils.ExternalAbilities.*;
-import com.lypaka.spawnmanager.Utils.HeldItemUtils;
-import com.lypaka.spawnmanager.Utils.PokemonSpawnBuilder;
+import com.lypaka.spawnmanager.Utils.SpawnerUtils.GeneratedSpawn;
+import com.lypaka.spawnmanager.Utils.SpawnerUtils.SpawnGenerator;
 import kotlin.Unit;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.World;
-import net.minecraft.world.chunk.Chunk;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NaturalSpawner {
 
@@ -39,13 +30,14 @@ public class NaturalSpawner {
     private static final Map<Area, Integer> spawnAttemptMap = new HashMap<>();
     public static Map<Area, Map<UUID, List<PokemonEntity>>> pokemonSpawnedMap = new HashMap<>();
     public static List<UUID> spawnedPokemonUUIDs = new ArrayList<>(); // used for battle end event listener to check for to despawn Pokemon or not
+    public static Map<UUID, List<PokemonEntity>> playerPokemonCount = new HashMap<>();
 
     public static void startTimer() {
 
-        if (SpawnAreaHandler.areasWithNaturalSpawns == 0) return;
+        if (SpawnAreaHandler.areasWithNaturalSpawns == 0) return; // stops this from doing ANYTHING if no use of natural spawners is detected anywhere on the server
         if (timer != null) {
 
-            timer.cancel();
+            timer.cancel(); // will stop the timer on reload and restart it, in the event the interval it runs at is changed
 
         }
 
@@ -55,337 +47,153 @@ public class NaturalSpawner {
             @Override
             public void run() {
 
-                for (Map.Entry<String, Map<Area, List<UUID>>> map : AreaHandler.playersInArea.entrySet()) {
+                for (Map.Entry<Region, List<Area>> entry : SpawnAreaHandler.naturalSpawnerAreas.entrySet()) {
 
-                    Map<Area, List<UUID>> map2 = map.getValue();
-                    for (Map.Entry<Area, List<UUID>> entry : map2.entrySet()) {
+                    Region region = entry.getKey();
+                    List<Area> areas = entry.getValue();
+                    if (AreaHandler.playersInArea.containsKey(region.getName())) {
 
-                        if (!entry.getValue().isEmpty()) {
+                        Map<Area, List<UUID>> p = AreaHandler.playersInArea.get(region.getName());
+                        for (Area area : areas) {
 
-                            Area area = entry.getKey();
-                            SpawnArea spawnArea = SpawnAreaHandler.areaMap.get(area);
-                            int spawnIntervalCount = 1;
-                            if (spawnAttemptMap.containsKey(area)) {
+                            if (p.containsKey(area)) {
 
-                                spawnIntervalCount = spawnAttemptMap.get(area);
+                                // Getting, checking, setting spawn interval values for this specific area based on its config setting
+                                SpawnArea spawnArea = SpawnAreaHandler.areaMap.get(area);
+                                int spawnIntervalCount = 1;
+                                if (spawnAttemptMap.containsKey(area)) {
 
-                            }
-                            if (spawnIntervalCount < spawnArea.getNaturalSpawnerSettings().getSpawnInterval()) {
+                                    spawnIntervalCount = spawnAttemptMap.get(area);
 
-                                spawnIntervalCount = spawnIntervalCount + 1;
-                                spawnAttemptMap.put(area, spawnIntervalCount);
-                                continue;
+                                }
+                                if (spawnIntervalCount < spawnArea.getNaturalSpawnerSettings().getSpawnInterval()) {
 
-                            } else {
-
-                                spawnIntervalCount = 1;
-                                spawnAttemptMap.put(area, spawnIntervalCount);
-
-                            }
-                            for (UUID uuid : entry.getValue()) {
-
-                                if (uuid == null) continue;
-                                ServerPlayerEntity player = LypakaUtils.playerMap.get(uuid);
-                                try {
-
-                                    if (player == null) continue;
-
-                                } catch (NullPointerException e) {
-
+                                    spawnIntervalCount = spawnIntervalCount + 1;
+                                    spawnAttemptMap.put(area, spawnIntervalCount);
                                     continue;
 
-                                }
-                                int x;
-                                try {
-
-                                    x = player.getBlockPos().getX();
-
-                                } catch (NullPointerException er) {
-
-                                    continue;
-
-                                }
-                                int y = player.getBlockPos().getY();
-                                int z = player.getBlockPos().getZ();
-                                World world = player.getWorld();
-                                String time = "Night";
-                                List<String> times = WorldTimeHandler.getCurrentTimeValues(world);
-                                for (String t : times) {
-
-                                    if (t.equalsIgnoreCase("DAY") || t.equalsIgnoreCase("DAWN") || t.equalsIgnoreCase("MORNING")) {
-
-                                        time = "Day";
-                                        break;
-
-                                    }
-
-                                }
-                                String weather = "Clear";
-                                if (world.isRaining()) {
-
-                                    weather = "Rain";
-
-                                } else if (world.isThundering()) {
-
-                                    weather = "Storm";
-
-                                }
-                                String location = "land";
-                                int radius = area.getRadius();
-                                int spawnX;
-                                int spawnY;
-                                int spawnZ;
-                                if (RandomHandler.getRandomChance(50)) {
-
-                                    spawnX = x + RandomHandler.getRandomNumberBetween(1, radius);
-
                                 } else {
 
-                                    spawnX = x - RandomHandler.getRandomNumberBetween(1, radius);
+                                    spawnIntervalCount = 1;
+                                    spawnAttemptMap.put(area, spawnIntervalCount);
 
                                 }
-                                if (RandomHandler.getRandomChance(50)) {
+                                List<UUID> uuids = p.get(area);
+                                for (UUID u : uuids) {
 
-                                    spawnZ = z + RandomHandler.getRandomNumberBetween(1, radius);
+                                    AtomicInteger count = new AtomicInteger();
+                                    List<PokemonEntity> playersSpawnedPokemon;
+                                    if (playerPokemonCount.containsKey(u)) {
 
-                                } else {
+                                        count.set(playerPokemonCount.get(u).size());
+                                        playersSpawnedPokemon = playerPokemonCount.get(u);
 
-                                    spawnZ = z - RandomHandler.getRandomNumberBetween(1, radius);
+                                    } else {
 
-                                }
-                                BlockPos pos = player.getBlockPos();
-                                BlockState state = world.getBlockState(pos);
-                                String blockID = Registries.BLOCK.getId(state.getBlock()).toString();
-                                if (blockID.equalsIgnoreCase("air")) location = "air";
-                                if (blockID.contains("water") || blockID.contains("lava")) location = "water";
-                                if (y <= area.getUnderground()) location = "underground";
-                                Heightmap.Type type = location.equalsIgnoreCase("water") ? Heightmap.Type.OCEAN_FLOOR : Heightmap.Type.WORLD_SURFACE;
-
-                                if (location.equalsIgnoreCase("underground")) {
-
-                                    spawnY = y;
-
-                                } else {
-
-                                    Chunk chunk = player.getWorld().getChunk(spawnX >> 4, spawnZ >> 4);
-                                    Heightmap heightmap = chunk.getHeightmap(type);
-                                    int relativeX = spawnX & 15;
-                                    int relativeZ = spawnZ & 15;
-                                    spawnY = heightmap.get(relativeX, relativeZ);
-
-                                }
-                                Pokemon playersPokemon = null;
-                                PlayerPartyStore party = Cobblemon.INSTANCE.getStorage().getParty(player);
-                                for (int i = 0; i < 6; i++) {
-
-                                    Pokemon p = party.get(i);
-                                    if (p != null) {
-
-                                        playersPokemon = p;
-                                        break;
+                                        playersSpawnedPokemon = new ArrayList<>();
 
                                     }
+                                    if (count.get() >= spawnArea.getNaturalSpawnerSettings().getSpawnLimit()) continue;
+                                    ServerPlayerEntity player = LypakaUtils.playerMap.getOrDefault(u, null);
+                                    if (player != null) {
 
-                                }
-                                List<Area> areas = AreaHandler.getSortedAreas(x, y, z, world);
-                                AtomicBoolean spawned = new AtomicBoolean(false);
-                                double modifier = 1.0;
-                                if (ArenaTrap.applies(playersPokemon) || Illuminate.applies(playersPokemon) || NoGuard.applies(playersPokemon)) {
+                                        SpawnManager.spawnerLogicThread.execute(() -> {
 
-                                    modifier = 2.0;
+                                            List<GeneratedSpawn> toSpawn = SpawnGenerator.generateNaturalSpawn(area, player);
+                                            player.getServer().executeSync(() -> {
 
-                                } else if (Infiltrator.applies(playersPokemon) || QuickFeet.applies(playersPokemon) || Stench.applies(playersPokemon) || WhiteSmoke.applies(playersPokemon)) {
+                                                // spawn Pokemon
+                                                for (GeneratedSpawn spawn : toSpawn) {
 
-                                    modifier = 0.5;
+                                                    Pokemon poke = spawn.getPokemon();
+                                                    BlockPos pos = spawn.getSpawnLocation();
+                                                    int spawnX = pos.getX();
+                                                    int spawnY = pos.getY();
+                                                    int spawnZ = pos.getZ();
+                                                    List<Area> areasAtSpawn = AreaHandler.getFromLocation(spawnX, spawnY, spawnZ, player.getWorld());
+                                                    if (areasAtSpawn.isEmpty()) continue;
+                                                    PokemonEntity entity = new PokemonEntity(player.getWorld(), poke, CobblemonEntities.POKEMON);
+                                                    if (spawnArea.getNaturalSpawnerSettings().doesClearSpawns()) {
 
-                                }
-                                for (int i = 0; i < areas.size(); i++) {
+                                                        Map<UUID, List<PokemonEntity>> spawnedMap = new HashMap<>();
+                                                        if (pokemonSpawnedMap.containsKey(area)) {
 
-                                    if (spawned.get()) break;
-                                    Area currentArea = areas.get(i);
-                                    SpawnArea currentSpawnArea = SpawnAreaHandler.areaMap.get(currentArea);
-                                    if (currentSpawnArea.getNaturalSpawnerSettings().doesLimitSpawns()) {
+                                                            spawnedMap = pokemonSpawnedMap.get(area);
 
-                                        if (BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) != null) break;
+                                                        }
+                                                        List<PokemonEntity> spawnedPokemon = new ArrayList<>();
+                                                        if (spawnedMap.containsKey(player.getUuid())) {
 
-                                    }
-                                    AreaSpawns spawns = SpawnAreaHandler.areaSpawnMap.get(currentSpawnArea);
-                                    if (!spawns.getNaturalSpawns().isEmpty()) {
+                                                            spawnedPokemon = spawnedMap.get(player.getUuid());
 
-                                        Map<PokemonSpawn, Double> pokemon = PokemonSpawnBuilder.buildNaturalSpawnsList(time, weather, location, spawns, modifier);
-                                        Map<Pokemon, PokemonSpawn> mapForHustle = new HashMap<>();
-                                        Pokemon firstPokemonSpawned = null;
-                                        List<Pokemon> toSpawn = new ArrayList<>();
-                                        for (Map.Entry<PokemonSpawn, Double> p : pokemon.entrySet()) {
+                                                        }
 
-                                            if (firstPokemonSpawned == null) {
+                                                        spawnedPokemon.add(entity);
+                                                        spawnedMap.put(player.getUuid(), spawnedPokemon);
+                                                        pokemonSpawnedMap.put(area, spawnedMap);
 
-                                                if (RandomHandler.getRandomChance(p.getValue())) {
+                                                    }
+                                                    entity.setPosition(spawnX, spawnY + 1.5, spawnZ);
+                                                    player.sendMessage(FancyTextHandler.getFormattedText("&eSpawned " + poke.getSpecies().getName() + " at " + spawnX + ", " + spawnY + ", " + spawnZ));
+                                                    entity.setGlowing(true);
+                                                    player.getWorld().spawnEntity(entity);
+                                                    playersSpawnedPokemon.add(entity);
+                                                    count.getAndIncrement();
+                                                    if (count.get() >= spawnArea.getNaturalSpawnerSettings().getSpawnLimit()) {
 
-                                                    firstPokemonSpawned = PokemonSpawnBuilder.buildPokemonFromPokemonSpawn(p.getKey());
-                                                    toSpawn.add(firstPokemonSpawned);
-                                                    mapForHustle.put(firstPokemonSpawned, p.getKey());
+                                                        break;
 
-                                                }
+                                                    }
+                                                    playerPokemonCount.put(player.getUuid(), playersSpawnedPokemon);
+                                                    if (spawnArea.getNaturalSpawnerSettings().doesDespawnAfterBattle()) {
 
-                                            } else {
+                                                        spawnedPokemonUUIDs.add(entity.getUuid());
 
-                                                if (p.getKey().getSpecies().getName().equalsIgnoreCase(firstPokemonSpawned.getSpecies().getName())) {
+                                                    }
+                                                    if (spawnArea.getNaturalSpawnerSettings().getDespawnTimer() > 0) {
 
-                                                    toSpawn.add(PokemonSpawnBuilder.buildPokemonFromPokemonSpawn(p.getKey()));
+                                                        entity.setDespawnCounter(spawnArea.getNaturalSpawnerSettings().getDespawnTimer());
 
-                                                }
-
-                                            }
-
-                                        }
-                                        for (Pokemon poke : toSpawn) {
-
-                                            if (Intimidate.applies(playersPokemon) || KeenEye.applies(playersPokemon)) {
-
-                                                poke = Intimidate.tryIntimidate(poke, playersPokemon);
-                                                if (poke == null) continue;
-
-                                            }
-                                            if (FlashFire.applies(playersPokemon)) {
-
-                                                poke = FlashFire.tryFlashFire(poke, pokemon);
-
-                                            } else if (Harvest.applies(playersPokemon)) {
-
-                                                poke = Harvest.tryHarvest(poke, pokemon);
-
-                                            } else if (LightningRod.applies(playersPokemon) || Static.applies(playersPokemon)) {
-
-                                                poke = LightningRod.tryLightningRod(poke, pokemon);
-
-                                            } else if (MagnetPull.applies(playersPokemon)) {
-
-                                                poke = MagnetPull.tryMagnetPull(poke, pokemon);
-
-                                            } else if (StormDrain.applies(playersPokemon)) {
-
-                                                poke = StormDrain.tryStormDrain(poke, pokemon);
-
-                                            }
-
-                                            if (CuteCharm.applies(playersPokemon)) {
-
-                                                CuteCharm.tryApplyCuteCharmEffect(poke, playersPokemon);
-
-                                            } else if (Synchronize.applies(playersPokemon)) {
-
-                                                Synchronize.applySynchronize(poke, playersPokemon);
-
-                                            }
-
-                                            int level = poke.getLevel();
-                                            if (Hustle.applies(playersPokemon) || Pressure.applies(playersPokemon) || VitalSpirit.applies(playersPokemon)) {
-
-                                                level = Hustle.tryHustle(level, mapForHustle.get(poke));
-
-                                            }
-                                            poke.setLevel(level);
-
-                                            HeldItemUtils.tryApplyHeldItem(poke, playersPokemon);
-
-                                            if (RandomHandler.getRandomChance(50)) {
-
-                                                spawnX = x + RandomHandler.getRandomNumberBetween(1, 4);
-
-                                            } else {
-
-                                                spawnX = x - RandomHandler.getRandomNumberBetween(1, 4);
-
-                                            }
-                                            if (RandomHandler.getRandomChance(50)) {
-
-                                                spawnZ = z + RandomHandler.getRandomNumberBetween(1, 4);
-
-                                            } else {
-
-                                                spawnZ = z - RandomHandler.getRandomNumberBetween(1, 4);
-
-                                            }
-
-                                            List<Area> areasAtSpawn = AreaHandler.getFromLocation(spawnX, spawnY, spawnZ, player.getWorld());
-                                            if (areasAtSpawn.isEmpty()) continue;
-                                            PokemonEntity entity = new PokemonEntity(player.getWorld(), poke, CobblemonEntities.POKEMON);
-                                            if (currentSpawnArea.getNaturalSpawnerSettings().doesClearSpawns()) {
-
-                                                Map<UUID, List<PokemonEntity>> spawnedMap = new HashMap<>();
-                                                if (pokemonSpawnedMap.containsKey(currentArea)) {
-
-                                                    spawnedMap = pokemonSpawnedMap.get(currentArea);
-
-                                                }
-                                                List<PokemonEntity> spawnedPokemon = new ArrayList<>();
-                                                if (spawnedMap.containsKey(player.getUuid())) {
-
-                                                    spawnedPokemon = spawnedMap.get(player.getUuid());
-
-                                                }
-
-                                                spawnedPokemon.add(entity);
-                                                spawnedMap.put(player.getUuid(), spawnedPokemon);
-                                                pokemonSpawnedMap.put(currentArea, spawnedMap);
-
-                                            }
-                                            Pokemon finalPoke = poke;
-                                            int finalSpawnX = spawnX;
-                                            int finalSpawnZ = spawnZ;
-                                            player.getWorld().getServer().executeSync(() -> {
-
-                                                entity.setPosition(finalSpawnX, spawnY + 1.5, finalSpawnZ);
-                                                player.getWorld().spawnEntity(entity);
-                                                spawned.set(true);
-                                                if (currentSpawnArea.getNaturalSpawnerSettings().doesDespawnAfterBattle()) {
-
-                                                    spawnedPokemonUUIDs.add(entity.getUuid());
-
-                                                }
-                                                if (currentSpawnArea.getNaturalSpawnerSettings().getDespawnTimer() > 0) {
-
-                                                    entity.setDespawnCounter(currentSpawnArea.getNaturalSpawnerSettings().getDespawnTimer());
-
-                                                }
-                                                if (toSpawn.size() == 1) {
-
+                                                    }
                                                     String messageType = "";
-                                                    if (finalPoke.getShiny()) {
+                                                    if (poke.getShiny()) {
 
                                                         messageType = "-Shiny";
 
                                                     }
                                                     messageType = "Spawn-Message" + messageType;
-                                                    String message = currentSpawnArea.getNaturalSpawnerSettings().getMessagesMap().get(messageType);
+                                                    String message = spawnArea.getNaturalSpawnerSettings().getMessagesMap().get(messageType);
                                                     if (!message.equalsIgnoreCase("")) {
 
-                                                        player.sendMessage(FancyTextHandler.getFormattedText(message.replace("%pokemon%", finalPoke.getSpecies().getName())), true);
+                                                        player.sendMessage(FancyTextHandler.getFormattedText(message.replace("%pokemon%", poke.getSpecies().getName())), true);
 
                                                     }
-                                                    // only one Pokemon spawned, so we check for the auto battle stuff
-                                                    if (RandomHandler.getRandomChance(currentSpawnArea.getNaturalSpawnerSettings().getAutoBattleChance())) {
+                                                    if (toSpawn.size() == 1) {
 
-                                                        Timer t = new Timer();
-                                                        t.schedule(new TimerTask() {
+                                                        // only one Pokemon spawned, so we check for the auto battle stuff
+                                                        if (RandomHandler.getRandomChance(spawnArea.getNaturalSpawnerSettings().getAutoBattleChance())) {
 
-                                                            @Override
-                                                            public void run() {
+                                                            Timer t = new Timer();
+                                                            t.schedule(new TimerTask() {
 
-                                                                if (BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) == null) {
+                                                                @Override
+                                                                public void run() {
 
-                                                                    BattleBuilder.INSTANCE.pve(player, entity, null).ifSuccessful(function -> {
+                                                                    if (BattleRegistry.INSTANCE.getBattleByParticipatingPlayer(player) == null) {
 
-                                                                        BattleUtils.autoBattlePlayerUUIDs.add(player.getUuid());
-                                                                        return Unit.INSTANCE;
+                                                                        BattleBuilder.INSTANCE.pve(player, entity, null).ifSuccessful(function -> {
 
-                                                                    });
+                                                                            BattleUtils.autoBattlePlayerUUIDs.add(player.getUuid());
+                                                                            return Unit.INSTANCE;
 
+                                                                        });
+
+                                                                    }
                                                                 }
-                                                            }
 
-                                                        }, 10);
+                                                            }, 10);
+
+                                                        }
 
                                                     }
 
@@ -393,11 +201,7 @@ public class NaturalSpawner {
 
                                             });
 
-                                        }
-
-                                    } else {
-
-                                        break;
+                                        });
 
                                     }
 

@@ -46,6 +46,8 @@ public class ConfigGetters {
     public static String possibleSpawnsMenuPrevPageButtonID;
     public static int possibleSpawnsMenuPrevPageButtonSlot;
 
+    public static boolean debugModeEnabled;
+
     public static void load() throws ObjectMappingException {
 
         mainMenuRows = SpawnManager.configManager.getConfigNode(1, "Main-Menu", "General", "Rows").getInt();
@@ -88,6 +90,8 @@ public class ConfigGetters {
         possibleSpawnsMenuPrevPageButtonDisplayName = SpawnManager.configManager.getConfigNode(1, "Spawns-Possible", "Slots", "Prev-Page", "Display-Name").getString();
         possibleSpawnsMenuPrevPageButtonID = SpawnManager.configManager.getConfigNode(1, "Spawns-Possible", "Slots", "Prev-Page", "ID").getString();
         possibleSpawnsMenuPrevPageButtonSlot = SpawnManager.configManager.getConfigNode(1, "Spawns-Possible", "Slots", "Prev-Page", "Slot").getInt();
+
+        debugModeEnabled = SpawnManager.configManager.getConfigNode(2, "Debug-Mode").getBoolean();
 
     }
 

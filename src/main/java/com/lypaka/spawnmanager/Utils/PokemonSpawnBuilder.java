@@ -3,6 +3,7 @@ package com.lypaka.spawnmanager.Utils;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.lypaka.lypakautils.Handlers.RandomHandler;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.*;
+import com.lypaka.spawnmanager.SpawnManager;
 
 import java.util.*;
 
@@ -11,12 +12,19 @@ public class PokemonSpawnBuilder {
     public static Pokemon buildPokemonFromPokemonSpawn (PokemonSpawn spawn) {
 
         Pokemon pokemon = spawn.buildAndGetPokemon();
+        if (pokemon.getSpecies().getName().contains("Bulbasaur") || pokemon.getSpecies().getName().contains("bulbasaur")) {
+
+            SpawnManager.logger.error("[SpawnManager] Found a Bulbasaur! Spawn data: " + spawn.getSpeciesName());
+
+        }
         if (!spawn.getForm().equalsIgnoreCase("")) {
 
             pokemon.setForm(spawn.getSpecies().getFormByName(spawn.getForm()));
 
         }
 
+        // putting this here as a safety thing for natural spawns removal
+        pokemon.getPersistentData().putBoolean("SpawnManagerSpawn", true);
         return pokemon;
 
     }
@@ -39,6 +47,10 @@ public class PokemonSpawnBuilder {
 
                 innerData = spawnData.get("Any");
 
+            } else if (spawnData.containsKey("any")) {
+
+                innerData = spawnData.get("any");
+
             } else {
 
                 continue;
@@ -53,6 +65,10 @@ public class PokemonSpawnBuilder {
             } else if (innerData.containsKey("Any")) {
 
                 data = innerData.get("Any");
+
+            } else if (innerData.containsKey("any")) {
+
+                data = innerData.get("any");
 
             } else {
 
@@ -78,14 +94,15 @@ public class PokemonSpawnBuilder {
 
         for (int i = chances.size() - 1; i >= 0; i--) {
 
-            if (RandomHandler.getRandomChance(chances.get(i))) {
+            List<SurfSpawn> spawnList = m2.get(chances.get(i));
+            for (SurfSpawn spawn : spawnList) {
 
-                List<SurfSpawn> spawnList = m2.get(chances.get(i));
-                for (SurfSpawn spawn : spawnList) {
+                if (RandomHandler.getRandomChance(chances.get(i))) {
 
                     pokemonMap.put(spawn, chances.get(i));
 
                 }
+
 
             }
 
@@ -100,49 +117,73 @@ public class PokemonSpawnBuilder {
         List<NaturalSpawn> naturalSpawns = spawns.getNaturalSpawns();
         Map<PokemonSpawn, Double> pokemonMap = new HashMap<>();
         if (naturalSpawns.isEmpty()) return pokemonMap;
-        Map<Double, List<NaturalSpawn>> m2 = new HashMap<>();
-        int groupSizeMax = 1;
+
+        Map<Double, List<NaturalSpawn>> spawnBuckets = new HashMap<>();
+
         for (NaturalSpawn n : naturalSpawns) {
 
             Map<String, Map<String, Map<String, String>>> spawnData = n.getSpawnData();
-            Map<String, Map<String, String>> innerData;
+            Map<String, Map<String, String>> innerData = null;
             if (spawnData.containsKey(time)) {
 
                 innerData = spawnData.get(time);
 
-            } else if (spawnData.containsKey("Any")) {
+            }
+            if (innerData == null) {
 
-                innerData = spawnData.get("Any");
+                if (spawnData.containsKey("Any")) {
 
-            } else {
+                    innerData = spawnData.get("Any");
 
-                continue;
+                }
 
             }
+            if (innerData == null) {
 
-            Map<String, String> data;
+                if (spawnData.containsKey("any")) {
+
+                    innerData = spawnData.get("any");
+
+                }
+
+            }
+            if (innerData == null) continue;
+
+            Map<String, String> data = null;
             if (innerData.containsKey(weather)) {
 
                 data = innerData.get(weather);
 
-            } else if (innerData.containsKey("Any")) {
+            }
+            if (data == null) {
 
-                data = innerData.get("Any");
+                if (innerData.containsKey("Any")) {
 
-            } else {
+                    data = innerData.get("Any");
 
-                continue;
+                }
+
+            }
+            if (data == null) {
+
+                if (innerData.containsKey("any")) {
+
+                    data = innerData.get("any");
+
+                }
 
             }
 
-            String locationTypes = data.get("Spawn-Location");
+            if (data == null) continue;
+
             boolean canSpawnHere = false;
+            String locationTypes = data.get("Spawn-Location");
             if (locationTypes.contains(", ")) {
 
                 String[] split = locationTypes.split(", ");
-                for (String l : split) {
+                for (String s : split) {
 
-                    if (l.equalsIgnoreCase(location)) {
+                    if (s.equalsIgnoreCase(location)) {
 
                         canSpawnHere = true;
                         break;
@@ -153,55 +194,48 @@ public class PokemonSpawnBuilder {
 
             } else {
 
-                canSpawnHere = location.equalsIgnoreCase(locationTypes);
+                canSpawnHere = locationTypes.equalsIgnoreCase(location);
 
             }
 
             if (!canSpawnHere) continue;
 
+            double spawnChance;
+            try {
 
-            double spawnChance = Double.parseDouble(data.get("Spawn-Chance"));
-            if (data.containsKey("Group-Size")) {
+                spawnChance = Double.parseDouble(data.get("Spawn-Chance")) * modifier;
 
-                groupSizeMax = Integer.parseInt(data.get("Group-Size"));
+            } catch (NumberFormatException e) {
 
-            }
-            spawnChance = spawnChance * modifier;
-            List<NaturalSpawn> list = new ArrayList<>();
-            if (m2.containsKey(spawnChance)) {
-
-                list = m2.get(spawnChance);
-                list.add(n);
-
-            } else {
-
-                list.add(n);
+                continue;
 
             }
-            m2.put(spawnChance, list);
 
+            spawnBuckets.computeIfAbsent(spawnChance, k -> new ArrayList<>()).add(n);
         }
 
-        List<Double> chances = new ArrayList<>(m2.keySet());
+        List<Double> chances = new ArrayList<>(spawnBuckets.keySet());
         Collections.sort(chances);
 
         for (int i = chances.size() - 1; i >= 0; i--) {
 
-            if (RandomHandler.getRandomChance(chances.get(i))) {
+            double chance = chances.get(i);
+            List<NaturalSpawn> spawnsAtThisChance = spawnBuckets.get(chance);
+            for (NaturalSpawn spawn : spawnsAtThisChance) {
 
-                List<NaturalSpawn> spawnList = m2.get(chances.get(i));
-                for (NaturalSpawn spawn : spawnList) {
+                if (spawn != null) {
 
-                    int groupSize = RandomHandler.getRandomNumberBetween(1, groupSizeMax);
-                    for (int p = 0; p < groupSize; p++) {
+                    if (RandomHandler.getRandomChance(chance)) {
 
-                        pokemonMap.put(spawn, chances.get(i));
+                        NaturalSpawn unique = new NaturalSpawn(spawn.getSpeciesName(), spawn.getForm(), spawn.getMinLevel(), spawn.getMaxLevel(), spawn.getSpawnData());
+                        pokemonMap.put(unique, chance);
 
                     }
 
                 }
 
             }
+
 
         }
 
@@ -432,6 +466,10 @@ public class PokemonSpawnBuilder {
 
                 innerData = spawnData.get("Any");
 
+            } else if (spawnData.containsKey("any")) {
+
+                innerData = spawnData.get("any");
+
             } else {
 
                 continue;
@@ -446,6 +484,10 @@ public class PokemonSpawnBuilder {
             } else if (innerData.containsKey("Any")) {
 
                 data = innerData.get("Any");
+
+            } else if (innerData.containsKey("any")) {
+
+                data = innerData.get("any");
 
             } else {
 
@@ -508,6 +550,10 @@ public class PokemonSpawnBuilder {
 
                 innerData = spawnData.get("Any");
 
+            } else if (spawnData.containsKey("any")) {
+
+                innerData = spawnData.get("any");
+
             } else {
 
                 continue;
@@ -522,6 +568,10 @@ public class PokemonSpawnBuilder {
             } else if (innerData.containsKey("Any")) {
 
                 data = innerData.get("Any");
+
+            } else if (innerData.containsKey("any")) {
+
+                data = innerData.get("any");
 
             } else {
 
@@ -573,10 +623,10 @@ public class PokemonSpawnBuilder {
 
         for (int i = chances.size() - 1; i >= 0; i--) {
 
-            if (RandomHandler.getRandomChance(chances.get(i))) {
+            List<GrassSpawn> spawnList = m2.get(chances.get(i));
+            for (GrassSpawn spawn : spawnList) {
 
-                List<GrassSpawn> spawnList = m2.get(chances.get(i));
-                for (GrassSpawn spawn : spawnList) {
+                if (RandomHandler.getRandomChance(chances.get(i))) {
 
                     pokemonMap.put(spawn, chances.get(i));
 
@@ -610,6 +660,10 @@ public class PokemonSpawnBuilder {
 
                 innerData = spawnData.get("Any");
 
+            } else if (spawnData.containsKey("any")) {
+
+                innerData = spawnData.get("any");
+
             } else {
 
                 continue;
@@ -624,6 +678,10 @@ public class PokemonSpawnBuilder {
             } else if (innerData.containsKey("Any")) {
 
                 data = innerData.get("Any");
+
+            } else if (innerData.containsKey("any")) {
+
+                data = innerData.get("any");
 
             } else {
 
@@ -675,10 +733,10 @@ public class PokemonSpawnBuilder {
 
         for (int i = chances.size() - 1; i >= 0; i--) {
 
-            if (RandomHandler.getRandomChance(chances.get(i))) {
+            List<CaveSpawn> spawnList = m2.get(chances.get(i));
+            for (CaveSpawn spawn : spawnList) {
 
-                List<CaveSpawn> spawnList = m2.get(chances.get(i));
-                for (CaveSpawn spawn : spawnList) {
+                if (RandomHandler.getRandomChance(chances.get(i))) {
 
                     pokemonMap.put(spawn, chances.get(i));
 

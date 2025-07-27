@@ -1,7 +1,6 @@
 package com.lypaka.spawnmanager.SpawnAreas.Spawns;
 
 import com.lypaka.lypakautils.ConfigurationLoaders.BasicConfigManager;
-import com.lypaka.lypakautils.ConfigurationLoaders.ComplexConfigManager;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 
 import java.util.List;

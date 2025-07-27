@@ -1,6 +1,7 @@
 package com.lypaka.spawnmanager.Commands;
 
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
+import com.cobblemon.mod.common.pokemon.FormData;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.Species;
 import com.lypaka.areamanager.Areas.Area;
@@ -10,9 +11,7 @@ import com.lypaka.areamanager.Regions.RegionHandler;
 import com.lypaka.lypakautils.Handlers.FancyTextHandler;
 import com.lypaka.lypakautils.Handlers.PermissionHandler;
 import com.lypaka.lypakautils.Handlers.RandomHandler;
-import com.lypaka.shadow.configurate.objectmapping.ObjectMappingException;
 import com.lypaka.spawnmanager.GUIs.EditorMenus.SpawnDataEditorMainMenu;
-import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -103,6 +102,11 @@ public class AddCommand {
                                                                                                                                                                     if (!pokemonFile.contains(".conf")) pokemonFile = pokemonFile + ".conf";
                                                                                                                                                                     Species pokemonSpecies = PokemonSpecies.INSTANCE.getByName(pokemonFile.replace(".conf", "").toLowerCase());
                                                                                                                                                                     Pokemon pokemon = pokemonSpecies.create(RandomHandler.getRandomNumberBetween(minLevel, maxLevel));
+                                                                                                                                                                    if (!form.equalsIgnoreCase("default")) {
+
+                                                                                                                                                                        pokemon.setForm(pokemonSpecies.getFormByName(form));
+
+                                                                                                                                                                    }
                                                                                                                                                                     SpawnDataEditorMainMenu menu = new SpawnDataEditorMainMenu();
                                                                                                                                                                     menu.open(player, region, area, pokemon, spawner, form, minLevel, maxLevel);
 

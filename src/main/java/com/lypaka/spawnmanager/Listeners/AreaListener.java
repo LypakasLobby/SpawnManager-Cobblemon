@@ -5,10 +5,7 @@ import com.lypaka.areamanager.API.AreaEvents.AreaLeaveCallback;
 import com.lypaka.areamanager.Areas.Area;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
-import com.lypaka.spawnmanager.Spawners.FishSpawner;
-import com.lypaka.spawnmanager.Spawners.HeadbuttSpawner;
-import com.lypaka.spawnmanager.Spawners.NaturalSpawner;
-import com.lypaka.spawnmanager.Spawners.RockSmashSpawner;
+import com.lypaka.spawnmanager.Spawners.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.network.ServerPlayerEntity;
 

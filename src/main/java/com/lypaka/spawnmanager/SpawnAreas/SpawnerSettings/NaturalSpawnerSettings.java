@@ -10,11 +10,14 @@ public class NaturalSpawnerSettings {
     private final int despawnTimer;
     private final boolean limitSpawns;
     private final Map<String, String> messagesMap;
-    private final boolean preventPixelmonSpawns;
+    private final boolean preventCobblemonSpawns;
+    private final double spawnerShinyChance;
     private final int spawnInterval;
+    private final int spawnLimit;
+    private final int spawnRadius;
 
     public NaturalSpawnerSettings (double autoBattleChance, boolean clearSpawns, boolean despawnAfterBattle, int despawnTimer, boolean limitSpawns,
-                                   Map<String, String> messagesMap, boolean preventPixelmonSpawns, int spawnInterval) {
+                                   Map<String, String> messagesMap, boolean preventCobblemonSpawns, double spawnerShinyChance, int spawnInterval, int spawnLimit, int spawnRadius) {
 
         this.autoBattleChance = autoBattleChance;
         this.clearSpawns = clearSpawns;
@@ -22,8 +25,11 @@ public class NaturalSpawnerSettings {
         this.despawnTimer = despawnTimer;
         this.limitSpawns = limitSpawns;
         this.messagesMap = messagesMap;
-        this.preventPixelmonSpawns = preventPixelmonSpawns;
+        this.preventCobblemonSpawns = preventCobblemonSpawns;
+        this.spawnerShinyChance = spawnerShinyChance;
         this.spawnInterval = spawnInterval;
+        this.spawnLimit = spawnLimit;
+        this.spawnRadius = spawnRadius;
 
     }
 
@@ -63,15 +69,33 @@ public class NaturalSpawnerSettings {
 
     }
 
-    public boolean doesPreventPixelmonSpawns() {
+    public boolean doesPreventCobblemonSpawns() {
 
-        return this.preventPixelmonSpawns;
+        return this.preventCobblemonSpawns;
+
+    }
+
+    public double getSpawnerShinyChance() {
+
+        return this.spawnerShinyChance;
 
     }
 
     public int getSpawnInterval() {
 
         return this.spawnInterval;
+
+    }
+
+    public int getSpawnLimit() {
+
+        return this.spawnLimit;
+
+    }
+
+    public int getSpawnRadius() {
+
+        return this.spawnRadius;
 
     }
 

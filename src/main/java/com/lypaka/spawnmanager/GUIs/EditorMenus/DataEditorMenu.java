@@ -5,6 +5,7 @@ import ca.landonjw.gooeylibs2.api.button.ButtonClick;
 import ca.landonjw.gooeylibs2.api.button.GooeyButton;
 import ca.landonjw.gooeylibs2.api.page.GooeyPage;
 import ca.landonjw.gooeylibs2.api.template.types.ChestTemplate;
+import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.lypaka.areamanager.Areas.Area;
 import com.lypaka.areamanager.Regions.Region;
@@ -63,7 +64,7 @@ public class DataEditorMenu {
         sizeLore.add(FancyTextHandler.getFormattedText("&eRight click to decrease by 1"));
         sizeLore.add(FancyTextHandler.getFormattedText("&eShift right click to decrease by 5"));
         metronome.set(DataComponentTypes.LORE, new LoreComponent(sizeLore));
-        page.getTemplate().getSlot(11).setButton(
+        page.getTemplate().getSlot(10).setButton(
                 GooeyButton.builder()
                         .display(metronome)
                         .onClick(clickAction -> {
@@ -101,7 +102,7 @@ public class DataEditorMenu {
         chanceLore.add(FancyTextHandler.getFormattedText("&eRight click to decrease by 0.01"));
         chanceLore.add(FancyTextHandler.getFormattedText("&eShift right click to decrease by 0.05"));
         luckyEgg.set(DataComponentTypes.LORE, new LoreComponent(chanceLore));
-        page.getTemplate().getSlot(13).setButton(
+        page.getTemplate().getSlot(12).setButton(
                 GooeyButton.builder()
                         .display(luckyEgg)
                         .onClick(clickAction -> {
@@ -136,12 +137,50 @@ public class DataEditorMenu {
         locationLore.add(FancyTextHandler.getFormattedText("&eCurrent Value: &a" + currentLocation));
         locationLore.add(FancyTextHandler.getFormattedText("&eClick me to toggle to the next value."));
         ringTarget.set(DataComponentTypes.LORE, new LoreComponent(locationLore));
-        page.getTemplate().getSlot(15).setButton(
+        page.getTemplate().getSlot(14).setButton(
                 GooeyButton.builder()
                         .display(ringTarget)
                         .onClick(() -> {
 
                             toggleNextLocation();
+                            open();
+
+                        })
+                        .build()
+        );
+
+        ItemStack shinyStone = ItemStackHandler.buildFromStringID("cobblemon:shiny_stone");
+        shinyStone.set(DataComponentTypes.CUSTOM_NAME, FancyTextHandler.getFormattedText("&eShiny Chance"));
+        String currentShiny = this.data.getOrDefault("Shiny-Chance", String.valueOf(Cobblemon.INSTANCE.getConfig().getShinyRate()));
+        List<Text> shinyLore = new ArrayList<>();
+        shinyLore.add(FancyTextHandler.getFormattedText("&eCurrent Value: &a" + currentShiny));
+        shinyLore.add(FancyTextHandler.getFormattedText("&eLeft click to increase by 0.01"));
+        shinyLore.add(FancyTextHandler.getFormattedText("&eShift left click to increase by 0.05"));
+        shinyLore.add(FancyTextHandler.getFormattedText("&eRight click to decrease by 0.01"));
+        shinyLore.add(FancyTextHandler.getFormattedText("&eShift right click to decrease by 0.05"));
+        shinyStone.set(DataComponentTypes.LORE, new LoreComponent(shinyLore));
+        page.getTemplate().getSlot(16).setButton(
+                GooeyButton.builder()
+                        .display(shinyStone)
+                        .onClick(clickAction -> {
+
+                            if (clickAction.getClickType() == ButtonClick.LEFT_CLICK) {
+
+                                increaseShiny(0.01);
+
+                            } else if (clickAction.getClickType() == ButtonClick.SHIFT_LEFT_CLICK) {
+
+                                increaseShiny(0.05);
+
+                            } else if (clickAction.getClickType() == ButtonClick.RIGHT_CLICK) {
+
+                                decreaseShiny(0.01);
+
+                            } else if (clickAction.getClickType() == ButtonClick.SHIFT_RIGHT_CLICK) {
+
+                                decreaseShiny(0.05);
+
+                            }
                             open();
 
                         })
@@ -238,6 +277,26 @@ public class DataEditorMenu {
         DecimalFormat df = new DecimalFormat("#.##");
         double newChance = Double.parseDouble(df.format(updated));
         this.data.put("Spawn-Chance", String.valueOf(newChance));
+
+    }
+
+    private void increaseShiny (double amount) {
+
+        double current = Double.parseDouble(this.data.getOrDefault("Shiny-Chance", String.valueOf(Cobblemon.INSTANCE.getConfig().getShinyRate())));
+        double updated = current + amount;
+        DecimalFormat df = new DecimalFormat("#.##");
+        double newChance = Double.parseDouble(df.format(updated));
+        this.data.put("Shiny-Chance", String.valueOf(newChance));
+
+    }
+
+    private void decreaseShiny (double amount) {
+
+        double current = Double.parseDouble(this.data.getOrDefault("Shiny-Chance", String.valueOf(Cobblemon.INSTANCE.getConfig().getShinyRate())));
+        double updated = Math.max(-1, current - amount);
+        DecimalFormat df = new DecimalFormat("#.##");
+        double newChance = Double.parseDouble(df.format(updated));
+        this.data.put("Shiny-Chance", String.valueOf(newChance));
 
     }
 

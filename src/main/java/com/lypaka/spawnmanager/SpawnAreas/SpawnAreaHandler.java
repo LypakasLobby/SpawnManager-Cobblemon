@@ -8,6 +8,7 @@ import com.lypaka.lypakautils.ConfigurationLoaders.ComplexConfigManager;
 import com.lypaka.lypakautils.ConfigurationLoaders.ConfigUtils;
 import com.lypaka.shadow.configurate.objectmapping.ObjectMappingException;
 import com.lypaka.shadow.google.common.reflect.TypeToken;
+import com.lypaka.spawnmanager.ConfigGetters;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnerSettings.*;
 import com.lypaka.spawnmanager.SpawnAreas.Spawns.*;
 import com.lypaka.spawnmanager.SpawnManager;
@@ -15,19 +16,22 @@ import com.lypaka.spawnmanager.SpawnManager;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SpawnAreaHandler {
 
     public static Map<Area, SpawnArea> areaMap = new HashMap<>();
     public static Map<SpawnArea, AreaSpawns> areaSpawnMap = new HashMap<>();
     public static int areasWithNaturalSpawns = 0;
+    public static Map<Region, List<Area>> naturalSpawnerAreas = new HashMap<>();
 
     public static void addFile (String region, Area area, String spawner, String pokemon, String form, int minLevel, int maxLevel, Map<String, Map<String, Map<String, String>>> spawnData) throws ObjectMappingException {
 
+        if (ConfigGetters.debugModeEnabled) {
+
+            SpawnManager.logger.info("[SPAWNMANAGER DEBUG] Adding pokemon: " + spawner + " / " + pokemon + " / " + form + " / " + minLevel + " / " + maxLevel + " / " + spawnData);
+
+        }
         // we need to get the list of file names for our desired spawner, add our Pokemon to that list, and run the code to generate the file
         SpawnArea spawnArea = areaMap.get(area);
         AreaSpawns areaSpawns = areaSpawnMap.get(spawnArea);
@@ -37,7 +41,7 @@ public class SpawnAreaHandler {
         if (!pokemon.contains(".conf")) pokemon = pokemon + ".conf";
         List<String> spawns;
         ComplexConfigManager ccm;
-        switch (spawner) {
+        switch (spawner.toLowerCase()) {
 
             case "cave":
                 spawns = new ArrayList<>(bcm.getConfigNode(0, "Cave-Spawns").getList(TypeToken.of(String.class)));
@@ -49,28 +53,34 @@ public class SpawnAreaHandler {
                 List<CaveSpawn> caveSpawnList = areaSpawns.getCaveSpawns();
                 for (int i = 0; i < spawns.size(); i++) {
 
-                    String species;
-                    if (spawns.get(i).equalsIgnoreCase(pokemon)) {
+                    String entry = spawns.get(i);
+                    String species = entry.replace(".conf", "");
+                    String entryForm;
+                    int entryMin;
+                    int entryMax;
+                    Map<String, Map<String, Map<String, String>>> entrySpawnData;
+                    if (entry.equalsIgnoreCase(pokemon)) {
 
-                        // found our Pokemon we just added, so we need to change the default template to match our desired values
-                        species = pokemon.replace(".conf", "");
-                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(pokemon.replace(".conf", ""));
-                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(form);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(minLevel);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(maxLevel);
-                        ccm.getConfigNode(i, "Spawn-Data").setValue(spawnData);
+                        // this is the Pokémon we just added
+                        entryForm = form;
+                        entryMin = minLevel;
+                        entryMax = maxLevel;
+                        entrySpawnData = spawnData;
+                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(species);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(entryForm);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(entryMin);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(entryMax);
+                        ccm.getConfigNode(i, "Spawn-Data").setValue(entrySpawnData);
 
                     } else {
 
-                        species = ccm.getConfigNode(i, "Pokemon-Data", "Species").getString();
-                        form = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
-                        minLevel = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
-                        maxLevel = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
-                        spawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<Map<String, Map<String, Map<String, String>>>>() {});
+                        entryForm = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
+                        entryMin = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
+                        entryMax = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
+                        entrySpawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<>() {});
 
                     }
-
-                    CaveSpawn caveSpawn = new CaveSpawn(species, form, minLevel, maxLevel, spawnData);
+                    CaveSpawn caveSpawn = new CaveSpawn(species, entryForm, entryMin, entryMax, entrySpawnData);
                     caveSpawnList.add(caveSpawn);
 
                 }
@@ -88,28 +98,35 @@ public class SpawnAreaHandler {
                 List<FishSpawn> fishSpawnList = areaSpawns.getFishSpawns();
                 for (int i = 0; i < spawns.size(); i++) {
 
-                    String species;
-                    if (spawns.get(i).equalsIgnoreCase(pokemon)) {
+                    String entry = spawns.get(i);
+                    String species = entry.replace(".conf", "");
+                    String entryForm;
+                    int entryMin;
+                    int entryMax;
+                    Map<String, Map<String, Map<String, String>>> entrySpawnData;
+                    if (entry.equalsIgnoreCase(pokemon)) {
 
-                        // found our Pokemon we just added, so we need to change the default template to match our desired values
-                        species = pokemon.replace(".conf", "");
-                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(pokemon.replace(".conf", ""));
-                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(form);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(minLevel);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(maxLevel);
-                        ccm.getConfigNode(i, "Spawn-Data").setValue(spawnData);
+                        // this is the Pokémon we just added
+                        entryForm = form;
+                        entryMin = minLevel;
+                        entryMax = maxLevel;
+                        entrySpawnData = spawnData;
+                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(species);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(entryForm);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(entryMin);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(entryMax);
+                        ccm.getConfigNode(i, "Spawn-Data").setValue(entrySpawnData);
 
                     } else {
 
-                        species = ccm.getConfigNode(i, "Pokemon-Data", "Species").getString();
-                        form = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
-                        minLevel = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
-                        maxLevel = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
-                        spawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<Map<String, Map<String, Map<String, String>>>>() {});
+                        entryForm = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
+                        entryMin = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
+                        entryMax = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
+                        entrySpawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<>() {});
 
                     }
 
-                    FishSpawn fishSpawn = new FishSpawn(species, form, minLevel, maxLevel, spawnData);
+                    FishSpawn fishSpawn = new FishSpawn(species, entryForm, entryMin, entryMax, entrySpawnData);
                     fishSpawnList.add(fishSpawn);
 
                 }
@@ -127,28 +144,35 @@ public class SpawnAreaHandler {
                 List<GrassSpawn> grassSpawnList = areaSpawns.getGrassSpawns();
                 for (int i = 0; i < spawns.size(); i++) {
 
-                    String species;
-                    if (spawns.get(i).equalsIgnoreCase(pokemon)) {
+                    String entry = spawns.get(i);
+                    String species = entry.replace(".conf", "");
+                    String entryForm;
+                    int entryMin;
+                    int entryMax;
+                    Map<String, Map<String, Map<String, String>>> entrySpawnData;
+                    if (entry.equalsIgnoreCase(pokemon)) {
 
-                        // found our Pokemon we just added, so we need to change the default template to match our desired values
-                        species = pokemon.replace(".conf", "");
-                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(pokemon.replace(".conf", ""));
-                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(form);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(minLevel);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(maxLevel);
-                        ccm.getConfigNode(i, "Spawn-Data").setValue(spawnData);
+                        // this is the Pokémon we just added
+                        entryForm = form;
+                        entryMin = minLevel;
+                        entryMax = maxLevel;
+                        entrySpawnData = spawnData;
+                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(species);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(entryForm);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(entryMin);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(entryMax);
+                        ccm.getConfigNode(i, "Spawn-Data").setValue(entrySpawnData);
 
                     } else {
 
-                        species = ccm.getConfigNode(i, "Pokemon-Data", "Species").getString();
-                        form = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
-                        minLevel = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
-                        maxLevel = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
-                        spawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<Map<String, Map<String, Map<String, String>>>>() {});
+                        entryForm = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
+                        entryMin = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
+                        entryMax = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
+                        entrySpawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<>() {});
 
                     }
 
-                    GrassSpawn grassSpawn = new GrassSpawn(species, form, minLevel, maxLevel, spawnData);
+                    GrassSpawn grassSpawn = new GrassSpawn(species, entryForm, entryMin, entryMax, entrySpawnData);
                     grassSpawnList.add(grassSpawn);
 
                 }
@@ -166,28 +190,35 @@ public class SpawnAreaHandler {
                 List<HeadbuttSpawn> headbuttSpawnList = areaSpawns.getHeadbuttSpawns();
                 for (int i = 0; i < spawns.size(); i++) {
 
-                    String species;
-                    if (spawns.get(i).equalsIgnoreCase(pokemon)) {
+                    String entry = spawns.get(i);
+                    String species = entry.replace(".conf", "");
+                    String entryForm;
+                    int entryMin;
+                    int entryMax;
+                    Map<String, Map<String, Map<String, String>>> entrySpawnData;
+                    if (entry.equalsIgnoreCase(pokemon)) {
 
-                        // found our Pokemon we just added, so we need to change the default template to match our desired values
-                        species = pokemon.replace(".conf", "");
-                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(pokemon.replace(".conf", ""));
-                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(form);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(minLevel);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(maxLevel);
-                        ccm.getConfigNode(i, "Spawn-Data").setValue(spawnData);
+                        // this is the Pokémon we just added
+                        entryForm = form;
+                        entryMin = minLevel;
+                        entryMax = maxLevel;
+                        entrySpawnData = spawnData;
+                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(species);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(entryForm);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(entryMin);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(entryMax);
+                        ccm.getConfigNode(i, "Spawn-Data").setValue(entrySpawnData);
 
                     } else {
 
-                        species = ccm.getConfigNode(i, "Pokemon-Data", "Species").getString();
-                        form = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
-                        minLevel = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
-                        maxLevel = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
-                        spawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<Map<String, Map<String, Map<String, String>>>>() {});
+                        entryForm = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
+                        entryMin = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
+                        entryMax = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
+                        entrySpawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<>() {});
 
                     }
 
-                    HeadbuttSpawn headbuttSpawn = new HeadbuttSpawn(species, form, minLevel, maxLevel, spawnData);
+                    HeadbuttSpawn headbuttSpawn = new HeadbuttSpawn(species, entryForm, entryMin, entryMax, entrySpawnData);
                     headbuttSpawnList.add(headbuttSpawn);
 
                 }
@@ -205,28 +236,35 @@ public class SpawnAreaHandler {
                 List<NaturalSpawn> naturalSpawnsList = areaSpawns.getNaturalSpawns();
                 for (int i = 0; i < spawns.size(); i++) {
 
-                    String species;
-                    if (spawns.get(i).equalsIgnoreCase(pokemon)) {
+                    String entry = spawns.get(i);
+                    String species = entry.replace(".conf", "");
+                    String entryForm;
+                    int entryMin;
+                    int entryMax;
+                    Map<String, Map<String, Map<String, String>>> entrySpawnData;
+                    if (entry.equalsIgnoreCase(pokemon)) {
 
-                        // found our Pokemon we just added, so we need to change the default template to match our desired values
-                        species = pokemon.replace(".conf", "");
-                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(pokemon.replace(".conf", ""));
-                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(form);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(minLevel);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(maxLevel);
-                        ccm.getConfigNode(i, "Spawn-Data").setValue(spawnData);
+                        // this is the Pokémon we just added
+                        entryForm = form;
+                        entryMin = minLevel;
+                        entryMax = maxLevel;
+                        entrySpawnData = spawnData;
+                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(species);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(entryForm);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(entryMin);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(entryMax);
+                        ccm.getConfigNode(i, "Spawn-Data").setValue(entrySpawnData);
 
                     } else {
 
-                        species = ccm.getConfigNode(i, "Pokemon-Data", "Species").getString();
-                        form = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
-                        minLevel = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
-                        maxLevel = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
-                        spawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<Map<String, Map<String, Map<String, String>>>>() {});
+                        entryForm = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
+                        entryMin = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
+                        entryMax = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
+                        entrySpawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<>() {});
 
                     }
 
-                    NaturalSpawn naturalSpawn = new NaturalSpawn(species, form, minLevel, maxLevel, spawnData);
+                    NaturalSpawn naturalSpawn = new NaturalSpawn(species, entryForm, entryMin, entryMax, entrySpawnData);
                     naturalSpawnsList.add(naturalSpawn);
 
                 }
@@ -244,28 +282,35 @@ public class SpawnAreaHandler {
                 List<RockSmashSpawn> rockSmashSpawnList = areaSpawns.getRockSmashSpawns();
                 for (int i = 0; i < spawns.size(); i++) {
 
-                    String species;
-                    if (spawns.get(i).equalsIgnoreCase(pokemon)) {
+                    String entry = spawns.get(i);
+                    String species = entry.replace(".conf", "");
+                    String entryForm;
+                    int entryMin;
+                    int entryMax;
+                    Map<String, Map<String, Map<String, String>>> entrySpawnData;
+                    if (entry.equalsIgnoreCase(pokemon)) {
 
-                        // found our Pokemon we just added, so we need to change the default template to match our desired values
-                        species = pokemon.replace(".conf", "");
-                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(pokemon.replace(".conf", ""));
-                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(form);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(minLevel);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(maxLevel);
-                        ccm.getConfigNode(i, "Spawn-Data").setValue(spawnData);
+                        // this is the Pokémon we just added
+                        entryForm = form;
+                        entryMin = minLevel;
+                        entryMax = maxLevel;
+                        entrySpawnData = spawnData;
+                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(species);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(entryForm);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(entryMin);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(entryMax);
+                        ccm.getConfigNode(i, "Spawn-Data").setValue(entrySpawnData);
 
                     } else {
 
-                        species = ccm.getConfigNode(i, "Pokemon-Data", "Species").getString();
-                        form = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
-                        minLevel = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
-                        maxLevel = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
-                        spawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<Map<String, Map<String, Map<String, String>>>>() {});
+                        entryForm = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
+                        entryMin = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
+                        entryMax = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
+                        entrySpawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<>() {});
 
                     }
 
-                    RockSmashSpawn rockSmashSpawn = new RockSmashSpawn(species, form, minLevel, maxLevel, spawnData);
+                    RockSmashSpawn rockSmashSpawn = new RockSmashSpawn(species, entryForm, entryMin, entryMax, entrySpawnData);
                     rockSmashSpawnList.add(rockSmashSpawn);
 
                 }
@@ -283,28 +328,35 @@ public class SpawnAreaHandler {
                 List<SurfSpawn> surfSpawnList = areaSpawns.getSurfSpawns();
                 for (int i = 0; i < spawns.size(); i++) {
 
-                    String species;
-                    if (spawns.get(i).equalsIgnoreCase(pokemon)) {
+                    String entry = spawns.get(i);
+                    String species = entry.replace(".conf", "");
+                    String entryForm;
+                    int entryMin;
+                    int entryMax;
+                    Map<String, Map<String, Map<String, String>>> entrySpawnData;
+                    if (entry.equalsIgnoreCase(pokemon)) {
 
-                        // found our Pokemon we just added, so we need to change the default template to match our desired values
-                        species = pokemon.replace(".conf", "");
-                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(pokemon.replace(".conf", ""));
-                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(form);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(minLevel);
-                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(maxLevel);
-                        ccm.getConfigNode(i, "Spawn-Data").setValue(spawnData);
+                        // this is the Pokémon we just added
+                        entryForm = form;
+                        entryMin = minLevel;
+                        entryMax = maxLevel;
+                        entrySpawnData = spawnData;
+                        ccm.getConfigNode(i, "Pokemon-Data", "Species").setValue(species);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Form").setValue(entryForm);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").setValue(entryMin);
+                        ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").setValue(entryMax);
+                        ccm.getConfigNode(i, "Spawn-Data").setValue(entrySpawnData);
 
                     } else {
 
-                        species = ccm.getConfigNode(i, "Pokemon-Data", "Species").getString();
-                        form = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
-                        minLevel = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
-                        maxLevel = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
-                        spawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<Map<String, Map<String, Map<String, String>>>>() {});
+                        entryForm = ccm.getConfigNode(i, "Pokemon-Data", "Form").getString();
+                        entryMin = ccm.getConfigNode(i, "Pokemon-Data", "Min-Level").getInt();
+                        entryMax = ccm.getConfigNode(i, "Pokemon-Data", "Max-Level").getInt();
+                        entrySpawnData = ccm.getConfigNode(i, "Spawn-Data").getValue(new TypeToken<>() {});
 
                     }
 
-                    SurfSpawn surfSpawn = new SurfSpawn(species, form, minLevel, maxLevel, spawnData);
+                    SurfSpawn surfSpawn = new SurfSpawn(species, entryForm, entryMin, entryMax, entrySpawnData);
                     surfSpawnList.add(surfSpawn);
 
                 }
@@ -328,8 +380,9 @@ public class SpawnAreaHandler {
             List<Area> areas = region.getAreas();
             for (Area area : areas) {
 
+                boolean needsSaving = false;
                 String areaName = area.getName();
-                SpawnManager.logger.info("Creating spawn files for area: " + areaName);
+                SpawnManager.logger.info("[SpawnManager] Creating spawn files for area: " + areaName);
                 Path dir = ConfigUtils.checkDir(Paths.get("./config/spawnmanager/regions/" + regionName + "/" + areaName));
                 BasicConfigManager bcm = new BasicConfigManager(files, dir, SpawnManager.class, SpawnManager.MOD_NAME, SpawnManager.MOD_ID, SpawnManager.logger);
                 bcm.init();
@@ -343,13 +396,13 @@ public class SpawnAreaHandler {
                 double caveSpawnChance = 0.35;
                 if (bcm.getConfigNode(0, "Cave-Spawner").isVirtual()) {
 
+                    needsSaving = true;
                     bcm.getConfigNode(0, "Cave-Spawner", "Auto-Battle").setValue(autoCaveBattle);
                     bcm.getConfigNode(0, "Cave-Spawner", "Block-IDs").setValue(caveBlockIDs);
                     bcm.getConfigNode(0, "Cave-Spawner", "Despawn-After-Battle").setValue(despawnAfterCaveBattle);
                     bcm.getConfigNode(0, "Cave-Spawner", "Messages").setValue(caveMessages);
                     bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Attempt-Chance").setValue(caveSpawnChance);
                     bcm.getConfigNode(0, "Cave-Spawns").setValue(new ArrayList<>());
-                    bcm.save();
 
                 } else {
 
@@ -360,19 +413,121 @@ public class SpawnAreaHandler {
                     caveSpawnChance = bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Attempt-Chance").getDouble();
 
                 }
-                CaveSpawnerSettings caveSpawnerSettings = new CaveSpawnerSettings(autoCaveBattle, caveBlockIDs, despawnAfterCaveBattle, caveMessages, caveSpawnChance);
+                double caveShinyChance = -1;
+                if (bcm.getConfigNode(0, "Cave-Spawner", "Shiny-Chance").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Cave-Spawner", "Shiny-Chance").setValue(caveShinyChance);
+                    bcm.getConfigNode(0, "Grass-Spawner", "Shiny-Chance").setValue(caveShinyChance);
+                    bcm.getConfigNode(0, "Natural-Spawner", "Shiny-Chance").setValue(caveShinyChance);
+                    bcm.getConfigNode(0, "Surf-Spawner", "Shiny-Chance").setValue(caveShinyChance);
+
+                } else {
+
+                    caveShinyChance = bcm.getConfigNode(0, "Cave-Spawner", "Shiny-Chance").getDouble();
+
+                }
+                boolean cavePreventCobblemonSpawns = true;
+                if (bcm.getConfigNode(0, "Cave-Spawner", "Prevent-Cobblemon-Spawns").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Cave-Spawner", "Prevent-Cobblemon-Spawns").setValue(true);
+
+                } else {
+
+                    cavePreventCobblemonSpawns = bcm.getConfigNode(0, "Cave-Spawner", "Prevent-Cobblemon-Spawns").getBoolean();
+
+                }
+                int caveSpawnLimit = 20;
+                if (bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Limit").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Limit").setValue(20);
+
+                } else {
+
+                    caveSpawnLimit = bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Limit").getInt();
+
+                }
+                int caveSpawnRadius = 15;
+                if (bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Radius").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Radius").setValue(15);
+
+                } else {
+
+                    caveSpawnRadius = bcm.getConfigNode(0, "Cave-Spawner", "Spawn-Radius").getInt();
+
+                }
+                CaveSpawnerSettings caveSpawnerSettings = new CaveSpawnerSettings(autoCaveBattle, caveBlockIDs, despawnAfterCaveBattle, caveMessages, cavePreventCobblemonSpawns, caveShinyChance, caveSpawnChance, caveSpawnLimit, caveSpawnRadius);
 
                 boolean clearFishSpawns = bcm.getConfigNode(0, "Fish-Spawner", "Clear-Spawns").getBoolean();
                 boolean despawnAfterFishBattle = bcm.getConfigNode(0, "Fish-Spawner", "Despawn-After-Battle").getBoolean();
                 int fishDespawnTimer = bcm.getConfigNode(0, "Fish-Spawner", "Despawn-Timer").getInt();
-                FishSpawnerSettings fishSpawnerSettings = new FishSpawnerSettings(clearFishSpawns, despawnAfterFishBattle, fishDespawnTimer);
+                double fishShinyChance = 0.01;
+                if (bcm.getConfigNode(0, "Fish-Spawner", "Shiny-Chance").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Fish-Spawner", "Shiny-Chance").setValue(0.01);
+
+                } else {
+
+                    fishShinyChance = bcm.getConfigNode(0, "Fish-Spawner", "Shiny-Chance").getDouble();
+
+                }
+                FishSpawnerSettings fishSpawnerSettings = new FishSpawnerSettings(clearFishSpawns, despawnAfterFishBattle, fishDespawnTimer, fishShinyChance);
 
                 boolean autoGrassBattle = bcm.getConfigNode(0, "Grass-Spawner", "Auto-Battle").getBoolean();
                 List<String> blockIDs = bcm.getConfigNode(0, "Grass-Spawner", "Block-IDs").getList(TypeToken.of(String.class));
                 boolean despawnAfterGrassBattle = bcm.getConfigNode(0, "Grass-Spawner", "Despawn-After-Battle").getBoolean();
                 Map<String, String> grassMessages = bcm.getConfigNode(0, "Grass-Spawner", "Messages").getValue(new TypeToken<Map<String, String>>() {});
+                boolean grassPreventCobblemonSpawns = true;
+                if (bcm.getConfigNode(0, "Grass-Spawner", "Prevent-Cobblemon-Spawns").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Grass-Spawner", "Prevent-Cobblemon-Spawns").setValue(true);
+
+                } else {
+
+                    grassPreventCobblemonSpawns = bcm.getConfigNode(0, "Grass-Spawner", "Prevent-Cobblemon-Spawns").getBoolean();
+
+                }
+                double grassShinyChance = -1;
+                if (!bcm.getConfigNode(0, "Grass-Spawner", "Shiny-Chance").isVirtual()) {
+
+                    grassShinyChance = bcm.getConfigNode(0, "Grass-Spawner", "Shiny-Chance").getDouble();
+
+                } else {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Grass-Spawner", "Shiny-Chance").setValue(0.01);
+
+                }
                 double grassSpawnChance = bcm.getConfigNode(0, "Grass-Spawner", "Spawn-Attempt-Chance").getDouble();
-                GrassSpawnerSettings grassSpawnerSettings = new GrassSpawnerSettings(autoGrassBattle, blockIDs, despawnAfterGrassBattle, grassMessages, grassSpawnChance);
+                int grassSpawnLimit = 20;
+                if (bcm.getConfigNode(0, "Grass-Spawner", "Spawn-Limit").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Grass-Spawner", "Spawn-Limit").setValue(20);
+
+                } else {
+
+                    grassSpawnLimit = bcm.getConfigNode(0, "Grass-Spawner", "Spawn-Limit").getInt();
+
+                }
+                int grassSpawnRadius = 15;
+                if (bcm.getConfigNode(0, "Grass-Spawner", "Spawn-Radius").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Grass-Spawner", "Spawn-Radius").setValue(15);
+
+                } else {
+
+                    grassSpawnRadius = bcm.getConfigNode(0, "Grass-Spawner", "Spawn-Radius").getInt();
+
+                }
+                GrassSpawnerSettings grassSpawnerSettings = new GrassSpawnerSettings(autoGrassBattle, blockIDs, despawnAfterGrassBattle, grassMessages, grassPreventCobblemonSpawns, grassShinyChance, grassSpawnChance, grassSpawnLimit, grassSpawnRadius);
 
                 double headbuttAutoBattleChance = bcm.getConfigNode(0, "Headbutt-Spawner", "Auto-Battle-Chance").getDouble();
                 boolean clearHeadbuttSpawns = bcm.getConfigNode(0, "Headbutt-Spawner", "Clear-Spawns").getBoolean();
@@ -392,9 +547,37 @@ public class SpawnAreaHandler {
                 int naturalDespawnTimer = bcm.getConfigNode(0, "Natural-Spawner", "Despawn-Timer").getInt();
                 boolean limitSpawns = bcm.getConfigNode(0, "Natural-Spawner", "Limit-Spawns").getBoolean();
                 Map<String, String> messages = bcm.getConfigNode(0, "Natural-Spawner", "Messages").getValue(new TypeToken<Map<String, String>>() {});
-                boolean preventPixelmonSpawns = bcm.getConfigNode(0, "Natural-Spawner", "Prevent-Pixelmon-Spawns").getBoolean();
+                boolean preventCobblemonSpawns = bcm.getConfigNode(0, "Natural-Spawner", "Prevent-Cobblemon-Spawns").getBoolean();
                 int spawnInterval = bcm.getConfigNode(0, "Natural-Spawner", "Spawn-Interval").getInt();
-                NaturalSpawnerSettings naturalSpawnerSettings = new NaturalSpawnerSettings(naturalAutoBattleChance, clearNaturalSpawns, despawnNaturalAfterBattle, naturalDespawnTimer, limitSpawns, messages, preventPixelmonSpawns, spawnInterval);
+                int naturalSpawnLimit = 20;
+                if (bcm.getConfigNode(0, "Natural-Spawner", "Spawn-Limit").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Natural-Spawner", "Spawn-Limit").setValue(20);
+
+                } else {
+
+                    naturalSpawnLimit = bcm.getConfigNode(0, "Natural-Spawner", "Spawn-Limit").getInt();
+
+                }
+                double naturalShinyChance = -1;
+                if (!bcm.getConfigNode(0, "Natural-Spawner", "Shiny-Chance").isVirtual()) {
+
+                    naturalShinyChance = bcm.getConfigNode(0, "Natural-Spawner", "Shiny-Chance").getDouble();
+
+                }
+                int naturalSpawnRadius = 15;
+                if (!bcm.getConfigNode(0, "Natural-Spawner", "Spawn-Radius").isVirtual()) {
+
+                    naturalSpawnRadius = bcm.getConfigNode(0, "Natural-Spawner", "Spawn-Radius").getInt();
+
+                } else {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Natural-Spawner", "Spawn-Radius").setValue(15);
+
+                }
+                NaturalSpawnerSettings naturalSpawnerSettings = new NaturalSpawnerSettings(naturalAutoBattleChance, clearNaturalSpawns, despawnNaturalAfterBattle, naturalDespawnTimer, limitSpawns, messages, preventCobblemonSpawns, naturalShinyChance, spawnInterval, naturalSpawnLimit, naturalSpawnRadius);
 
                 double rockSmashAutoBattleChance = bcm.getConfigNode(0, "Rock-Smash-Spawner", "Auto-Battle-Chance").getDouble();
                 boolean clearRockSmashSpawns = bcm.getConfigNode(0, "Rock-Smash-Spawner", "Clear-Spawns").getBoolean();
@@ -412,13 +595,54 @@ public class SpawnAreaHandler {
                 List<String> surfBlockIDs = bcm.getConfigNode(0, "Surf-Spawner", "Block-IDs").getList(TypeToken.of(String.class));
                 boolean despawnAfterSurfBattle = bcm.getConfigNode(0, "Surf-Spawner", "Despawn-After-Battle").getBoolean();
                 Map<String, String> surfMessages = bcm.getConfigNode(0, "Surf-Spawner", "Messages").getValue(new TypeToken<Map<String, String>>() {});
+                boolean surfPreventCobblemonSpawns = true;
+                if (bcm.getConfigNode(0, "Surf-Spawner", "Prevent-Cobblemon-Spawns").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Surf-Spawner", "Prevent-Cobblemon-Spawns").setValue(true);
+
+                } else {
+
+                    surfPreventCobblemonSpawns = bcm.getConfigNode(0, "Surf-Spawner", "Prevent-Cobblemon-Spawns").getBoolean();
+
+                }
                 double surfSpawnChance = bcm.getConfigNode(0, "Surf-Spawner", "Spawn-Attempt-Chance").getDouble();
-                SurfSpawnerSettings surfSpawnerSettings = new SurfSpawnerSettings(autoSurfBattle, surfBlockIDs, despawnAfterSurfBattle, surfMessages, surfSpawnChance);
+                double surfShinyChance = -1;
+                if (!bcm.getConfigNode(0, "Surf-Spawner", "Shiny-Chance").isVirtual()) {
+
+                    surfShinyChance = bcm.getConfigNode(0, "Surf-Spawner", "Shiny-Chance").getDouble();
+
+                } else {
+
+                    if (!needsSaving) needsSaving = true;
+
+                }
+                int surfSpawnLimit = 20;
+                if (bcm.getConfigNode(0, "Surf-Spawner", "Spawn-Limit").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Surf-Spawner", "Spawn-Limit").setValue(20);
+
+                } else {
+
+                    surfSpawnLimit = bcm.getConfigNode(0, "Surf-Spawner", "Spawn-Limit").getInt();
+
+                }
+                int surfSpawnRadius = 15;
+                if (bcm.getConfigNode(0, "Surf-Spawner", "Spawn-Radius").isVirtual()) {
+
+                    if (!needsSaving) needsSaving = true;
+                    bcm.getConfigNode(0, "Surf-Spawner", "Spawn-Radius").setValue(15);
+
+                } else {
+
+                    surfSpawnRadius = bcm.getConfigNode(0, "Surf-Spawner", "Spawn-Radius").getInt();
+
+                }
+                SurfSpawnerSettings surfSpawnerSettings = new SurfSpawnerSettings(autoSurfBattle, surfBlockIDs, despawnAfterSurfBattle, surfMessages, surfPreventCobblemonSpawns, surfShinyChance, surfSpawnChance, surfSpawnLimit, surfSpawnRadius);
 
                 SpawnArea a = new SpawnArea(area, caveSpawnerSettings, fishSpawnerSettings, grassSpawnerSettings, headbuttSpawnerSettings, naturalSpawnerSettings, rockSmashSpawnerSettings, surfSpawnerSettings);
                 a.create();
-
-                //AreaManager.areaConfigManager.put(area, bcm);
 
                 List<String> caveSpawns = bcm.getConfigNode(0, "Cave-Spawns").getList(TypeToken.of(String.class));
                 ComplexConfigManager ccm = new ComplexConfigManager(caveSpawns, "cave-spawns", "caveSpawnTemplate.conf", dir, SpawnManager.class, SpawnManager.MOD_NAME, SpawnManager.MOD_ID, SpawnManager.logger);
@@ -508,6 +732,18 @@ public class SpawnAreaHandler {
                 if (!naturalSpawnsList.isEmpty()) {
 
                     areasWithNaturalSpawns++;
+                    List<Area> areaList = new ArrayList<>();
+                    if (naturalSpawnerAreas.containsKey(region)) {
+
+                        areaList = naturalSpawnerAreas.get(region);
+
+                    }
+                    if (!areaList.contains(area)) {
+
+                        areaList.add(area);
+
+                    }
+                    naturalSpawnerAreas.put(region, areaList);
 
                 }
 
@@ -547,6 +783,12 @@ public class SpawnAreaHandler {
 
                 AreaSpawns spawns = new AreaSpawns(a, caveSpawnList, fishSpawnsList, grassSpawnsList, headbuttSpawnsList, naturalSpawnsList, rockSmashSpawnsList, surfSpawnsList, bcm);
                 areaSpawnMap.put(a, spawns);
+
+                if (needsSaving) {
+
+                    bcm.save();
+
+                }
 
             }
 

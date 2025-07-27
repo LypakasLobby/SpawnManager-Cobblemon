@@ -13,6 +13,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class SpawnManager implements ModInitializer {
 
@@ -20,12 +22,13 @@ public class SpawnManager implements ModInitializer {
     public static final String MOD_NAME = "SpawnManager";
     public static final Logger logger = LogManager.getLogger(MOD_NAME);
     public static BasicConfigManager configManager;
+    public static ExecutorService spawnerLogicThread = Executors.newSingleThreadExecutor();
 
     @Override
     public void onInitialize() {
 
         Path dir = ConfigUtils.checkDir(Paths.get("./config/spawnmanager"));
-        String[] files = new String[]{"heldItems.conf", "guiSettings.conf"};
+        String[] files = new String[]{"heldItems.conf", "guiSettings.conf", "spawnmanager.conf"};
         configManager = new BasicConfigManager(files, dir, SpawnManager.class, MOD_NAME, MOD_ID, logger);
         configManager.init();
         try {

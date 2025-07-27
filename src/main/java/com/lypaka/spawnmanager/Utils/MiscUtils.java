@@ -3,10 +3,8 @@ package com.lypaka.spawnmanager.Utils;
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.storage.party.PlayerPartyStore;
 import com.cobblemon.mod.common.pokemon.Pokemon;
+import com.lypaka.lypakautils.Handlers.RandomHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MiscUtils {
 
@@ -26,6 +24,28 @@ public class MiscUtils {
         }
 
         return aliveCount > 0;
+
+    }
+
+    public static void tryShiny (Pokemon pokemon, double chance) {
+
+        if (chance >= 1) {
+
+            if (RandomHandler.getRandomNumberBetween(1, chance) == 1) {
+
+                pokemon.setShiny(true);
+
+            }
+
+        } else {
+
+            if (RandomHandler.getRandomChance(chance)) {
+
+                pokemon.setShiny(true);
+
+            }
+
+        }
 
     }
 

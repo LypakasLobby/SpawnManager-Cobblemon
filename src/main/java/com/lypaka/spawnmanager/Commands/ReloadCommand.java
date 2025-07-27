@@ -58,6 +58,7 @@ public class ReloadCommand {
                                                     ConfigGetters.load();
                                                     SpawnAreaHandler.loadAreas();
                                                     HeldItemUtils.load();
+                                                    //NaturalSpawner.startTimer();
                                                     NaturalSpawner.startTimer();
                                                     c.getSource().sendMessage(FancyTextHandler.getFormattedText("&aSuccessfully reloaded SpawnManager!"));
 
