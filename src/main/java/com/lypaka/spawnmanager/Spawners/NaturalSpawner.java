@@ -5,11 +5,13 @@ import com.cobblemon.mod.common.battles.BattleBuilder;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
+import com.cobblemon.mod.common.pokemon.status.statuses.persistent.SleepStatus;
 import com.lypaka.areamanager.Areas.Area;
 import com.lypaka.areamanager.Areas.AreaHandler;
 import com.lypaka.areamanager.Regions.Region;
 import com.lypaka.lypakautils.Handlers.FancyTextHandler;
 import com.lypaka.lypakautils.Handlers.RandomHandler;
+import com.lypaka.lypakautils.Handlers.WorldTimeHandler;
 import com.lypaka.lypakautils.LypakaUtils;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
@@ -136,6 +138,23 @@ public class NaturalSpawner {
                                                     entity.setPosition(spawnX, spawnY + 1.5, spawnZ);
                                                     player.sendMessage(FancyTextHandler.getFormattedText("&eSpawned " + poke.getSpecies().getName() + " at " + spawnX + ", " + spawnY + ", " + spawnZ));
                                                     entity.setGlowing(true);
+                                                    String time = "Night";
+                                                    List<String> times = WorldTimeHandler.getCurrentTimeValues(player.getWorld());
+                                                    for (String timeValue : SpawnGenerator.TIME_PRIORITY) {
+
+                                                        if (times.stream().anyMatch(t -> t.equalsIgnoreCase(timeValue))) {
+
+                                                            time = timeValue;
+                                                            break;
+
+                                                        }
+
+                                                    }
+                                                    if (time.equalsIgnoreCase("night")) {
+
+                                                        poke.applyStatus(new SleepStatus());
+
+                                                    }
                                                     player.getWorld().spawnEntity(entity);
                                                     playersSpawnedPokemon.add(entity);
                                                     count.getAndIncrement();

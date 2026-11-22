@@ -7,6 +7,7 @@ import com.cobblemon.mod.common.battles.BattleBuilder;
 import com.cobblemon.mod.common.battles.BattleRegistry;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
+import com.cobblemon.mod.common.pokemon.status.statuses.persistent.SleepStatus;
 import com.lypaka.areamanager.Areas.Area;
 import com.lypaka.areamanager.Areas.AreaHandler;
 import com.lypaka.areamanager.Regions.RegionHandler;
@@ -159,6 +160,23 @@ public class CaveSpawner implements PlayerLandMovementCallback {
                                         int spawnZ = pos.getZ();
                                         PokemonEntity entity = new PokemonEntity(player.getWorld(), poke, CobblemonEntities.POKEMON);
                                         entity.setPosition(spawnX, spawnY + 1.5, spawnZ);
+                                        String time = "Night";
+                                        List<String> times = WorldTimeHandler.getCurrentTimeValues(world);
+                                        for (String timeValue : SpawnGenerator.TIME_PRIORITY) {
+
+                                            if (times.stream().anyMatch(t -> t.equalsIgnoreCase(timeValue))) {
+
+                                                time = timeValue;
+                                                break;
+
+                                            }
+
+                                        }
+                                        if (time.equalsIgnoreCase("night")) {
+
+                                            poke.applyStatus(new SleepStatus());
+
+                                        }
                                         player.getWorld().spawnEntity(entity);
                                         finalPlayersSpawnedPokemon.add(entity);
                                         count.getAndIncrement();

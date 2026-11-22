@@ -53,7 +53,7 @@ public class NaturalCobblemonSpawnListener {
         });
 
         // Commenting this out instead of removing it in the event I might need it later
-        /*CobblemonEvents.ENTITY_SPAWN.subscribe(Priority.NORMAL, event -> {
+        CobblemonEvents.ENTITY_SPAWN.subscribe(Priority.NORMAL, event -> {
 
             if (event.getEntity() instanceof PokemonEntity) {
 
@@ -88,7 +88,7 @@ public class NaturalCobblemonSpawnListener {
 
             return Unit.INSTANCE;
 
-        });*/
+        });
 
     }
 }

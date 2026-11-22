@@ -1,6 +1,7 @@
 package com.lypaka.spawnmanager.Listeners;
 
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
+import com.cobblemon.mod.common.pokemon.Species;
 import com.lypaka.areamanager.API.AreaEvents.AreaLeaveCallback;
 import com.lypaka.areamanager.API.FinishedLoadingCallback;
 import com.lypaka.lypakautils.API.PlayerLandMovementCallback;
@@ -37,7 +38,7 @@ public class ServerStartedListener implements ServerLifecycleEvents.ServerStarte
         CaptureListener.register();
         KillListener.register();
 
-        PokemonSpecies.INSTANCE.getImplemented().forEach(e -> AddCommand.species.add(e.getName()));
+        PokemonSpecies.getSpecies().forEach(e -> AddCommand.species.add(e.getName()));
 
     }
 

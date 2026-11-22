@@ -794,6 +794,8 @@ public class SpawnAreaHandler {
 
         }
 
+        SpawnManager.logger.info("[SpawnManager] Finished loading.");
+
     }
 
 }

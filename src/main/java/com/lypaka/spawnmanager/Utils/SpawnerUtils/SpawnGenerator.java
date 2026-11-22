@@ -7,8 +7,11 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.lypaka.areamanager.Areas.Area;
 import com.lypaka.areamanager.Areas.AreaHandler;
 import com.lypaka.areamanager.Regions.Region;
+import com.lypaka.deskribe.Deskribe;
+import com.lypaka.deskribe.DeskribeEnvironmentAPI;
 import com.lypaka.lypakautils.Handlers.RandomHandler;
 import com.lypaka.lypakautils.Handlers.WorldTimeHandler;
+import com.lypaka.shadow.google.common.collect.Lists;
 import com.lypaka.spawnmanager.ConfigGetters;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnArea;
 import com.lypaka.spawnmanager.SpawnAreas.SpawnAreaHandler;
@@ -30,7 +33,7 @@ import java.util.*;
 
 public class SpawnGenerator {
 
-    private static final List<String> TIME_PRIORITY = Arrays.asList("Day", "Morning", "Dawn", "Dusk", "Midnight");
+    public static final List<String> TIME_PRIORITY = Arrays.asList("Day", "Morning", "Dawn", "Dusk", "Midnight");
 
     public static List<GeneratedSpawn> generateSurfSpawn (Area area, ServerPlayerEntity player) {
 
@@ -61,6 +64,76 @@ public class SpawnGenerator {
             } else if (world.isThundering()) {
 
                 weather = "Storm";
+
+            }
+            try {
+
+                Long deskribeTime = DeskribeEnvironmentAPI.getTime(player);
+                if (deskribeTime != null) {
+
+                    List<String> current = Lists.newArrayList();
+                    if (world.isDay()) {
+
+                        if (deskribeTime >= 23500L || deskribeTime < 1250L) {
+
+                            current.add("Dawn");
+
+                        }
+
+                        if (deskribeTime >= 0L && deskribeTime < 6000L) {
+
+                            current.add("Morning");
+
+                        }
+
+                        if (deskribeTime >= 1250L && deskribeTime < 11800L) {
+
+                            current.add("Day");
+
+                        }
+
+                    } else {
+
+                        if (deskribeTime >= 11800L && deskribeTime < 14000L) {
+
+                            current.add("Dusk");
+
+                        }
+
+                        if (deskribeTime >= 14000L && deskribeTime < 23500L) {
+
+                            current.add("Night");
+
+                        }
+
+                        if (deskribeTime >= 17750L && deskribeTime < 18250L) {
+
+                            current.add("Midnight");
+
+                        }
+
+                    }
+                    for (String p : TIME_PRIORITY) {
+
+                        if (times.stream().anyMatch(t -> t.equalsIgnoreCase(p))) {
+
+                            time = p;
+                            break;
+
+                        }
+
+                    }
+
+                }
+                weather = DeskribeEnvironmentAPI.getWeather(player).toString();
+                if (weather.equalsIgnoreCase("rain")) weather = "Rain";
+                if (weather.equalsIgnoreCase("clear")) weather = "Clear";
+                if (weather.equalsIgnoreCase("storm")) weather = "Storm";
+                if (weather.equalsIgnoreCase("thunder")) weather = "Storm";
+
+            } catch (Exception e) {
+
+                // do nothing
 
             }
             String location = "land";
@@ -315,6 +388,76 @@ public class SpawnGenerator {
                 weather = "Storm";
 
             }
+            try {
+
+                Long deskribeTime = DeskribeEnvironmentAPI.getTime(player);
+                if (deskribeTime != null) {
+
+                    List<String> current = Lists.newArrayList();
+                    if (world.isDay()) {
+
+                        if (deskribeTime >= 23500L || deskribeTime < 1250L) {
+
+                            current.add("Dawn");
+
+                        }
+
+                        if (deskribeTime >= 0L && deskribeTime < 6000L) {
+
+                            current.add("Morning");
+
+                        }
+
+                        if (deskribeTime >= 1250L && deskribeTime < 11800L) {
+
+                            current.add("Day");
+
+                        }
+
+                    } else {
+
+                        if (deskribeTime >= 11800L && deskribeTime < 14000L) {
+
+                            current.add("Dusk");
+
+                        }
+
+                        if (deskribeTime >= 14000L && deskribeTime < 23500L) {
+
+                            current.add("Night");
+
+                        }
+
+                        if (deskribeTime >= 17750L && deskribeTime < 18250L) {
+
+                            current.add("Midnight");
+
+                        }
+
+                    }
+                    for (String p : TIME_PRIORITY) {
+
+                        if (times.stream().anyMatch(t -> t.equalsIgnoreCase(p))) {
+
+                            time = p;
+                            break;
+
+                        }
+
+                    }
+
+                }
+                weather = DeskribeEnvironmentAPI.getWeather(player).toString();
+                if (weather.equalsIgnoreCase("rain")) weather = "Rain";
+                if (weather.equalsIgnoreCase("clear")) weather = "Clear";
+                if (weather.equalsIgnoreCase("storm")) weather = "Storm";
+                if (weather.equalsIgnoreCase("thunder")) weather = "Storm";
+
+            } catch (Exception e) {
+
+                // do nothing
+
+            }
             String location = "land";
             int spawnX;
             int spawnY;
@@ -565,6 +708,76 @@ public class SpawnGenerator {
             } else if (world.isThundering()) {
 
                 weather = "Storm";
+
+            }
+            try {
+
+                Long deskribeTime = DeskribeEnvironmentAPI.getTime(player);
+                if (deskribeTime != null) {
+
+                    List<String> current = Lists.newArrayList();
+                    if (world.isDay()) {
+
+                        if (deskribeTime >= 23500L || deskribeTime < 1250L) {
+
+                            current.add("Dawn");
+
+                        }
+
+                        if (deskribeTime >= 0L && deskribeTime < 6000L) {
+
+                            current.add("Morning");
+
+                        }
+
+                        if (deskribeTime >= 1250L && deskribeTime < 11800L) {
+
+                            current.add("Day");
+
+                        }
+
+                    } else {
+
+                        if (deskribeTime >= 11800L && deskribeTime < 14000L) {
+
+                            current.add("Dusk");
+
+                        }
+
+                        if (deskribeTime >= 14000L && deskribeTime < 23500L) {
+
+                            current.add("Night");
+
+                        }
+
+                        if (deskribeTime >= 17750L && deskribeTime < 18250L) {
+
+                            current.add("Midnight");
+
+                        }
+
+                    }
+                    for (String p : TIME_PRIORITY) {
+
+                        if (times.stream().anyMatch(t -> t.equalsIgnoreCase(p))) {
+
+                            time = p;
+                            break;
+
+                        }
+
+                    }
+
+                }
+                weather = DeskribeEnvironmentAPI.getWeather(player).toString();
+                if (weather.equalsIgnoreCase("rain")) weather = "Rain";
+                if (weather.equalsIgnoreCase("clear")) weather = "Clear";
+                if (weather.equalsIgnoreCase("storm")) weather = "Storm";
+                if (weather.equalsIgnoreCase("thunder")) weather = "Storm";
+
+            } catch (Exception e) {
+
+                // do nothing
 
             }
             String location = "land";
@@ -819,7 +1032,76 @@ public class SpawnGenerator {
                 weather = "Storm";
 
             }
+            try {
 
+                Long deskribeTime = DeskribeEnvironmentAPI.getTime(player);
+                if (deskribeTime != null) {
+
+                    List<String> current = Lists.newArrayList();
+                    if (world.isDay()) {
+
+                        if (deskribeTime >= 23500L || deskribeTime < 1250L) {
+
+                            current.add("Dawn");
+
+                        }
+
+                        if (deskribeTime >= 0L && deskribeTime < 6000L) {
+
+                            current.add("Morning");
+
+                        }
+
+                        if (deskribeTime >= 1250L && deskribeTime < 11800L) {
+
+                            current.add("Day");
+
+                        }
+
+                    } else {
+
+                        if (deskribeTime >= 11800L && deskribeTime < 14000L) {
+
+                            current.add("Dusk");
+
+                        }
+
+                        if (deskribeTime >= 14000L && deskribeTime < 23500L) {
+
+                            current.add("Night");
+
+                        }
+
+                        if (deskribeTime >= 17750L && deskribeTime < 18250L) {
+
+                            current.add("Midnight");
+
+                        }
+
+                    }
+                    for (String p : TIME_PRIORITY) {
+
+                        if (times.stream().anyMatch(t -> t.equalsIgnoreCase(p))) {
+
+                            time = p;
+                            break;
+
+                        }
+
+                    }
+
+                }
+                weather = DeskribeEnvironmentAPI.getWeather(player).toString();
+                if (weather.equalsIgnoreCase("rain")) weather = "Rain";
+                if (weather.equalsIgnoreCase("clear")) weather = "Clear";
+                if (weather.equalsIgnoreCase("storm")) weather = "Storm";
+                if (weather.equalsIgnoreCase("thunder")) weather = "Storm";
+
+            } catch (Exception e) {
+
+                // do nothing
+
+            }
             Pokemon playersPokemon = null;
             PlayerPartyStore party = Cobblemon.INSTANCE.getStorage().getParty(player);
             for (int i = 0; i < 6; i++) {
@@ -1006,6 +1288,76 @@ public class SpawnGenerator {
             } else if (world.isThundering()) {
 
                 weather = "Storm";
+
+            }
+            try {
+
+                Long deskribeTime = DeskribeEnvironmentAPI.getTime(player);
+                if (deskribeTime != null) {
+
+                    List<String> current = Lists.newArrayList();
+                    if (world.isDay()) {
+
+                        if (deskribeTime >= 23500L || deskribeTime < 1250L) {
+
+                            current.add("Dawn");
+
+                        }
+
+                        if (deskribeTime >= 0L && deskribeTime < 6000L) {
+
+                            current.add("Morning");
+
+                        }
+
+                        if (deskribeTime >= 1250L && deskribeTime < 11800L) {
+
+                            current.add("Day");
+
+                        }
+
+                    } else {
+
+                        if (deskribeTime >= 11800L && deskribeTime < 14000L) {
+
+                            current.add("Dusk");
+
+                        }
+
+                        if (deskribeTime >= 14000L && deskribeTime < 23500L) {
+
+                            current.add("Night");
+
+                        }
+
+                        if (deskribeTime >= 17750L && deskribeTime < 18250L) {
+
+                            current.add("Midnight");
+
+                        }
+
+                    }
+                    for (String p : TIME_PRIORITY) {
+
+                        if (times.stream().anyMatch(t -> t.equalsIgnoreCase(p))) {
+
+                            time = p;
+                            break;
+
+                        }
+
+                    }
+
+                }
+                weather = DeskribeEnvironmentAPI.getWeather(player).toString();
+                if (weather.equalsIgnoreCase("rain")) weather = "Rain";
+                if (weather.equalsIgnoreCase("clear")) weather = "Clear";
+                if (weather.equalsIgnoreCase("storm")) weather = "Storm";
+                if (weather.equalsIgnoreCase("thunder")) weather = "Storm";
+
+            } catch (Exception e) {
+
+                // do nothing
 
             }
             String location = "land";
